@@ -1,0 +1,856 @@
+# This class contains the attributes and methods allowing to define the progressive hedging algorithm.
+
+from ScenarioTree import ScenarioTree
+from Constants import Constants
+from MIPSolver import MIPSolver
+from Solution import Solution
+import gurobipy as gp
+from gurobipy import *
+from Scenario import Scenario
+import copy
+import time
+import math
+import os
+import numpy as np
+from collections import deque
+
+# Define the directory path relative to the current script location
+directory = "./PH_Model_lp"
+try:
+    os.makedirs(directory, exist_ok=True)
+except OSError as e:
+    if e.errno != os.errno.EEXIST:
+        raise
+
+#This class give the methods for the classical Progressive Hedging approach
+class ProgressiveHedging(object):
+
+    def __init__(self, 
+                 instance, 
+                 testidentifier, 
+                 treestructure, 
+                 scenariotree=None, 
+                 givenACFestablishments=[],
+                 givenlandRescueVehicles=[],
+                 givenBackupHospitals=[]
+                 ):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- Constructor")
+
+        self.Instance = instance
+        self.TestIdentifier = testidentifier
+        self.TreeStructure = treestructure
+
+        self.LastTwoSolutionsPerMIP = {}  # Store the last two solutions
+
+        ########## The Following block of code is only for the when that we terminate PH earlier than its convergence. As a result, it may lead to infeasible solutions!
+        # That is why we do the following calculations, to prevent infeasibility! However, note that, using this way cause having not good solutions at the end of the day!
+        if len(givenACFestablishments) > 0:
+            givenACFestablishments = [[min(round(x), 1) for x in row] for row in givenACFestablishments]
+
+        if len(givenlandRescueVehicles) > 0:
+            givenlandRescueVehicles = [[[round(x) for x in row] for row in sublist] for sublist in givenlandRescueVehicles]
+        
+        if len(givenBackupHospitals) > 0:
+            givenBackupHospitals = [[[min(round(x), 1) for x in row] for row in sublist] for sublist in givenBackupHospitals]
+
+
+
+        self.GivenACFEstablishment = givenACFestablishments
+        self.GivenNrLandRescueVehicle = givenlandRescueVehicles
+        self.GivenBackupHospital = givenBackupHospitals
+
+        self.SolveWithfixedACFEstablishment = len(self.GivenACFEstablishment) > 0
+
+        self.Evaluation = False
+
+        self.GenerateScenarios(scenariotree)
+
+        self.rho_PenaltyParameter = 0
+        self.CurrentImplementableSolution = None
+
+        self.TraceFileName = "./Temp/PHtrace_%s_Evaluation_%s.txt" % (self.TestIdentifier.GetAsString(), Constants.Evaluation_Part)
+        
+        ####################### ACFEstablishment
+        self.LagrangianACFEstablishment = [[0   for i in self.Instance.ACFSet]
+                                                for w in self.ScenarioNrSet]
+
+        self.lambda_LinearLagACFEstablishment = [[0    for i in self.Instance.ACFSet]
+                                                        for w in self.ScenarioNrSet]
+        
+        ####################### LandRescueVehicle
+        self.LagrangianLandRescueVehicle = [[[0     for m in self.Instance.RescueVehicleSet]
+                                                    for i in self.Instance.ACFSet]
+                                                    for w in self.ScenarioNrSet]
+
+        self.lambda_LinearLagLandRescueVehicle = [[[0     for m in self.Instance.RescueVehicleSet]
+                                                            for i in self.Instance.ACFSet]
+                                                            for w in self.ScenarioNrSet]
+        
+        ####################### BackupHospital
+        self.LagrangianBackupHospital = [[[0    for hprime in self.Instance.HospitalSet]
+                                                for h in self.Instance.HospitalSet]
+                                                for w in self.ScenarioNrSet]
+
+        self.lambda_LinearLagBackupHospital = [[[0      for hprime in self.Instance.HospitalSet]
+                                                        for h in self.Instance.HospitalSet]
+                                                        for w in self.ScenarioNrSet]
+
+
+        self.CurrentIteration = 0
+        self.StartTime = time.time()
+        
+        if Constants.Dynamic_Learning_rho_PenaltyParameter:
+            # Parameters for Dynamic Learning rho
+            self.tauHistory_x = deque([1, 1], maxlen=2)  # Start with the first elements as 1
+            self.sigmaHistory_x = deque([1 , 1], maxlen=2)  # Start with the first elements as 1
+            self.alphaHistory_x = deque([1 , 1], maxlen=2)  # Start with the first elements as 1
+            self.betaHistory_x = deque([0.5 , 0.5], maxlen=2)  # Start with the first elements as 0.5
+
+            # Parameters for Dynamic Learning rho
+            self.tauHistory_thetaVar = deque([1, 1], maxlen=2)  # Start with the first elements as 1
+            self.sigmaHistory_thetaVar = deque([1 , 1], maxlen=2)  # Start with the first elements as 1
+            self.alphaHistory_thetaVar = deque([1 , 1], maxlen=2)  # Start with the first elements as 1
+            self.betaHistory_thetaVar = deque([0.5 , 0.5], maxlen=2)  # Start with the first elements as 0.5
+
+            # Parameters for Dynamic Learning rho
+            self.tauHistory_w = deque([1, 1], maxlen=2)  # Start with the first elements as 1
+            self.sigmaHistory_w = deque([1 , 1], maxlen=2)  # Start with the first elements as 1
+            self.alphaHistory_w = deque([1 , 1], maxlen=2)  # Start with the first elements as 1
+            self.betaHistory_w = deque([0.5 , 0.5], maxlen=2)  # Start with the first elements as 0.5
+
+            self.PreviousOptimalityGap = None  # Initialize PreviousOptimalityGap as None
+
+        self.BuildMIPs2()
+
+        self.duration = 0
+
+    def BuildMIPs2(self):
+        #Build the mathematicals models (1 per scenarios)
+        #mipset = [0]
+        mipset = range(self.NrMIPBatch)
+
+        treestructure = [1] * (self.Instance.NrTimeBucket)
+
+        self.MIPSolvers = [MIPSolver(instance = self.Instance, 
+                                     model = Constants.Two_Stage, 
+                                     scenariotree = self.SplitedScenarioTree[w],
+                                     nrscenario = treestructure[1],
+                                     givenACFEstablishment = self.GivenACFEstablishment,  
+                                     givenNrLandRescueVehicle = self.GivenNrLandRescueVehicle,  
+                                     givenBackupHospital = self.GivenBackupHospital,  
+                                     logfile="NO")
+                                        for w in mipset]
+        for w in mipset:
+            self.MIPSolvers[w].BuildModel()
+
+            if Constants.Debug:
+                # Define the path for the LP file within the newly created (or existing) directory
+                file_path = os.path.join(directory, f"PH_MathematicalModel_w_{w}.lp")
+                # Write the model to the file
+                self.MIPSolvers[w].LocAloc.write(file_path)
+
+    def SplitScenrioTree2(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- SplitScenrioTree2")
+
+        #batchsize = 1030
+        batchsize = 1
+        self.NrMIPBatch = int(math.ceil(len(self.ScenarioNrSet)/(batchsize)))
+        if Constants.Debug: print("Total number of batches:", self.NrMIPBatch)
+        self.Indexscenarioinbatch = [None for m in range(self.NrMIPBatch)]
+        self.Scenarioinbatch = [None for m in range(self.NrMIPBatch)]
+        self.SplitedScenarioTree = [None for m in range(self.NrMIPBatch)]
+        self.BatchofScenario = [int(math.floor(w/batchsize)) for w in self.ScenarioNrSet]
+        self.NewIndexOfScenario = [ w % batchsize for w in self.ScenarioNrSet]
+
+        if Constants.Debug: print("Batch of each scenario:", self.BatchofScenario)
+        if Constants.Debug: print("New index of each scenario within its batch:", self.NewIndexOfScenario)
+
+        for m in range(self.NrMIPBatch):
+
+            firstscenarioinbatch = m * batchsize
+            lastscenarioinbatch = min((m+1) * batchsize, len(self.ScenarioNrSet))
+            nrscenarioinbatch = lastscenarioinbatch - firstscenarioinbatch
+            
+            if Constants.Debug: print("\nProcessing Batch #", m+1)
+            if Constants.Debug: print("First scenario index in batch:", firstscenarioinbatch)
+            if Constants.Debug: print("Last scenario index in batch:", lastscenarioinbatch)
+            if Constants.Debug: print("Number of scenarios in batch:", nrscenarioinbatch)
+
+            self.Indexscenarioinbatch[m] = range(firstscenarioinbatch, lastscenarioinbatch)
+            self.Scenarioinbatch[m] = [self.ScenarioSet[w] for w in self.Indexscenarioinbatch[m]]
+
+            if Constants.Debug: print("Scenarios in Batch #", m+1, ":", self.Scenarioinbatch[m])
+
+            #treestructure = [1] * (self.Instance.NrTimeBucket - 1) + [0]
+            treestructure = [1] * (self.Instance.NrTimeBucket)
+
+            if Constants.Debug: print("Tree structure for Batch #", m+1, ":", treestructure)
+
+            self.SplitedScenarioTree[m] = ScenarioTree(instance = self.Instance, 
+                                                        tree_structure = treestructure, 
+                                                        scenario_seed = 0,
+                                                        givenscenarioset=self.Scenarioinbatch[m],
+                                                        CopyscenariofromMulti_Stage = True,
+                                                        scenariogenerationmethod=self.TestIdentifier.ScenarioSampling)    
+              
+
+        if Constants.Debug: print("self.SplitedScenarioTree: ", self.SplitedScenarioTree) 
+
+    #This function creates the scenario tree
+    def GenerateScenarios(self, scenariotree=None):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GenerateScenarios")
+        
+        # Build the scenario tree
+        if Constants.Debug: print(self.TreeStructure)
+        if scenariotree is None:
+            self.ScenarioTree = ScenarioTree(   instance=self.Instance,
+                                                tree_structure=self.TreeStructure,
+                                                scenario_seed=self.TestIdentifier.ScenarioSeed,
+                                                scenariogenerationmethod=self.TestIdentifier.ScenarioSampling)
+        else:
+            self.ScenarioTree = scenariotree
+
+        self.ScenarioSet = self.ScenarioTree.GetAllScenarioSet()
+
+        self.ScenarioNrSet = range(len(self.ScenarioSet))
+        if Constants.Debug: print("self.ScenarioNrSet: ", self.ScenarioNrSet)
+        
+        self.SplitScenrioTree2()
+
+    def InitTrace(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- InitTrace")
+        if Constants.PrintPHATrace:
+            self.TraceFile = open(self.TraceFileName, "w")
+            self.TraceFile.write("Start the Progressive Hedging algorithm \n")
+            self.TraceFile.close()
+
+    def ComputeConvergenceX(self):
+        #if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- ComputeConvergenceX")
+        difference = 0
+        for w in self.ScenarioNrSet:
+            nw = self.NewIndexOfScenario[w]
+            mm = self.BatchofScenario[w]
+            for i in self.Instance.FacilitySet:    
+                difference += self.ScenarioSet[w].Probability \
+                                * math.pow(self.CurrentSolution[mm].FacilityEstablishment_x_wi[nw][i] - 
+                                            self.CurrentImplementableSolution.FacilityEstablishment_x_wi[w][i], 2)
+
+        #if Constants.Debug: print("difference_x: ", difference)
+        convergence = math.sqrt(difference)
+        #if Constants.Debug: print("convergence: ", convergence)
+        return convergence
+
+    def Compute_OptimalityGap_X(self):
+        """
+        Compute the gap based on the difference between the last two solutions.
+        """
+        # Initialize the convergence gap
+        difference = 0
+
+        for m, solution_deque in self.LastTwoSolutionsPerMIP.items():
+            # Ensure we have at least two solutions to compare
+            if len(solution_deque) < 2:
+                if Constants.Debug:
+                    print(f"Skipping MIP {m}, not enough solutions in deque")
+                continue
+
+            # Retrieve the last two solutions
+            last_solution = solution_deque[-1]
+            second_last_solution = solution_deque[-2]
+
+            # Iterate over the scenarios in the current batch
+            for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[m]):
+                nw = self.NewIndexOfScenario[scenario]
+                for i in self.Instance.FacilitySet:
+                    # Compute the squared difference between the two solutions for each variable
+                    difference += self.ScenarioSet[scenario].Probability * \
+                                math.pow(
+                                    last_solution.FacilityEstablishment_x_wi[nw][i] -
+                                    second_last_solution.FacilityEstablishment_x_wi[nw][i],
+                                    2
+                                )
+
+        # Compute the convergence gap as the square root of the accumulated differences
+        convergence = math.sqrt(difference)
+
+        return convergence
+
+    def GetLinearPenaltyForScenario(self, w):
+        #if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GetLinearPenaltyForScenario")
+
+        nw = self.NewIndexOfScenario[w]
+        mm = self.BatchofScenario[w]
+        linterm = 0
+
+        linterm = linterm + sum(self.LagrangianFacilityEstablishment[w][i] \
+                                * (self.CurrentSolution[mm].FacilityEstablishment_x_wi[nw][i])
+                                for i in self.Instance.FacilitySet)
+
+        return linterm
+        
+    def GetLinearPenalty(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GetLinearPenalty")
+        result = sum(self.ScenarioSet[w].Probability * (self.GetLinearPenaltyForScenario(w))
+                     for w in self.ScenarioNrSet)
+
+        return result
+
+    def GetQuadraticPenaltyForScenario(self, w):
+        #if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GetQuadraticPenaltyForScenario")
+        
+        nw = self.NewIndexOfScenario[w]
+        mm = self.BatchofScenario[w]
+        quadterm = 0
+
+        quadterm = quadterm + sum(Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter \
+                                    * math.pow((self.CurrentSolution[mm].FacilityEstablishment_x_wi[nw][i]), 2)
+                                    for i in self.Instance.FacilitySet)
+
+        return quadterm
+
+    def GetQuadraticPenalty(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GetQuadraticPenalty")
+
+        result = sum(self.ScenarioSet[w].Probability * self.GetQuadraticPenaltyForScenario(w)
+                     for w in self.ScenarioNrSet)
+
+        return result
+
+    def RateQuadLinear(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GetQuadraticPenalty")
+
+        result = self.GetQuadraticPenalty()/ (self.Getlambda_LinearLagrangianterm())
+
+        return result
+
+    def Getlambda_LinearLagrangianterm(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- Getlambda_LinearLagrangianterm")
+
+        result = sum( self.ScenarioSet[w].Probability * \
+                      (self.GetLinearPenaltyForScenario(w) + self.CurrentSolution[self.BatchofScenario[w]].TotalCost)
+                        for w in self.ScenarioNrSet)
+        return result
+
+    def WriteInTraceFile(self, string):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- WriteInTraceFile")
+
+        if Constants.PrintPHATrace:
+            self.TraceFile = open(self.TraceFileName, "a")
+            self.TraceFile.write(string)
+            self.TraceFile.close()
+
+    def GetPrimalConvergenceIndice(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GetPrimalConvergenceIndice")
+
+        result = 0
+
+        result = result + sum(self.ScenarioSet[w].Probability \
+                                * math.pow(self.CurrentImplementableSolution.FacilityEstablishment_x_wi[w][i]
+                                - self.PreviousImplementableSolution.FacilityEstablishment_x_wi[w][i], 2)
+                                for i in self.Instance.FacilitySet
+                                for w in self.ScenarioNrSet)
+        return result
+
+    def GetDualConvergenceIndice(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GetDualConvergenceIndice")
+        result = 0
+
+        result = result + sum(self.ScenarioSet[w].Probability \
+                                * math.pow(self.CurrentSolution[self.BatchofScenario[w]].FacilityEstablishment_x_wi[self.NewIndexOfScenario[w]][i]
+                                - self.CurrentImplementableSolution.FacilityEstablishment_x_wi[w][i], 2)
+                                for i in self.Instance.FacilitySet
+                                for w in self.ScenarioNrSet)
+        return result
+
+    def GetDistance(self, solution):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GetDistance")
+        result = 0
+
+        result = result + sum(self.ScenarioSet[w].Probability \
+                            * math.pow(solution.FacilityEstablishment_x_wi[w][i], 2)
+                            for i in self.Instance.FacilitySet
+                            for w in self.ScenarioNrSet)
+        return result
+            
+    def RateLargeChangeInImplementable(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- RateLargeChangeInImplementable")
+
+        primalcon = self.GetPrimalConvergenceIndice()
+        divider = max(self.GetDistance(self.CurrentImplementableSolution),
+                      self.GetDistance(self.PreviousImplementableSolution))
+
+        result =(primalcon / divider)
+        return result
+
+    def RatePrimalDual(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- RatePrimalDual")
+
+        primalcon = self.GetPrimalConvergenceIndice()
+        dualcon = self.GetDualConvergenceIndice()
+        divider = max(1,dualcon)
+
+        result =(primalcon-dualcon / divider)
+        return result
+
+    def RateDualPrimal(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- RateDualPrimal")
+
+        primalcon = self.GetPrimalConvergenceIndice()
+        dualcon = self.GetDualConvergenceIndice()
+        divider = max(1, primalcon)
+
+        result = (dualcon - primalcon / divider)
+        return result
+                    
+    def CheckStopingCriterion(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- CheckStopingCriterion")      
+        gapX = Constants.Infinity       
+        gapThetaVar = Constants.Infinity       
+        gapW = Constants.Infinity       
+
+        if self.CurrentIteration > 0:
+            gapX = self.ComputeConvergenceX()
+            gapThetaVar = self.ComputeConvergenceThetaVar()
+            gapW = self.ComputeConvergenceW()
+
+        convergencereached = ((gapX < Constants.PHConvergenceTolerence) and 
+                              (gapThetaVar < Constants.PHConvergenceTolerence) and 
+                              (gapW < Constants.PHConvergenceTolerence))
+        
+        self.duration = time.time() - self.StartTime
+        timelimitreached = self.duration > Constants.AlgorithmTimeLimit
+        iterationlimitreached = self.CurrentIteration > Constants.PHIterationLimit
+        result = convergencereached or timelimitreached or iterationlimitreached
+
+        if Constants.PrintPHATrace and self.CurrentIteration > 0:
+            #self.CurrentImplementableSolution.ComputeInventory()
+            self.CurrentImplementableSolution.ComputeCost()
+
+            dualconv = -1
+            primconv = -1
+            lpenalty = self.GetLinearPenalty()
+            qpenalty = self.GetQuadraticPenalty()
+            ratequad_lin = self.RateQuadLinear()
+            ratechangeimplem = -1
+            ratedualprimal = -1
+            rateprimaldual = -1
+            if self.CurrentIteration > 1:
+                primconv = self.GetPrimalConvergenceIndice()
+                dualconv = self.GetDualConvergenceIndice()
+                ratechangeimplem = self.RateLargeChangeInImplementable()
+                rateprimaldual = self.RatePrimalDual()
+                ratedualprimal = self.RateDualPrimal()
+
+            trace_message = (
+                "Iteration: %r, Duration: %.2f, GapX: %.2f, UB: %.2f, linear penalty: %.2f, "
+                "quadratic penalty: %.2f, Multiplier: %.6f, primal conv: %.2f, dual conv: %.2f, "
+                "Rate Large Change(l): %.2f, rate quad_lin(s): %.2f, rateprimaldual(l<-): %.2f, "
+                "ratedualprimal(l->): %.2f, convergenceX: %.2f\n"
+                % (
+                    self.CurrentIteration,
+                    self.duration,
+                    gapX,
+                    self.CurrentImplementableSolution.TotalCost,
+                    lpenalty,
+                    qpenalty,
+                    self.rho_PenaltyParameter,
+                    primconv,
+                    dualconv,
+                    ratechangeimplem,
+                    ratequad_lin,
+                    rateprimaldual,
+                    ratedualprimal,
+                    self.ComputeConvergenceX(),
+                )
+            )
+            self.WriteInTraceFile(trace_message)
+
+        return result
+
+    def UpdatePenaltyParameter_rho_x(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- UpdatePenaltyParameter_rho_x")
+
+        print("Iteration: ", self.CurrentIteration)
+        # Compute the Non-Anticipativity Gap (NA Gap) and Partial Optimality Gap
+        NAGap_g_x = self.ComputeConvergenceX()
+        print("NAGap_g_x: ", NAGap_g_x)
+        
+        Partial_Optimality_Gap = self.Compute_OptimalityGap_X()
+        print("Partial_Optimality_Gap: ", Partial_Optimality_Gap)
+
+        # Calculate the Optimality Gap
+        OptimalityGap = NAGap_g_x + Partial_Optimality_Gap
+        print("OptimalityGap: ", OptimalityGap)
+
+        # Calculate tau
+        if self.PreviousOptimalityGap is not None:
+            tau = OptimalityGap / self.PreviousOptimalityGap  # Calculate the new tau
+        else:
+            tau = self.tauHistory_x[-1]  # Use the most recent tau if no previous optimality gap exists
+        # Update the deque with the new tau
+        self.tauHistory_x.append(tau)
+        print("tauHistory_x: ", list(self.tauHistory_x))
+
+        # Update gamma based on the calculated tau
+        gamma = max(0.1, min(0.9, self.tauHistory_x[-1] - 0.6))
+        print("gamma: ", gamma)
+
+        # Update sigma based on the calculated gamma and tau and previosusigma
+        sigma = (1-gamma)*self.sigmaHistory_x[-1] + gamma * self.tauHistory_x[-1]
+        self.sigmaHistory_x.append(sigma)
+        print("sigmaHistory_x: ", list(self.sigmaHistory_x))
+
+        # Update zeta based on sigma
+        zeta = np.sqrt(1.1 * self.sigmaHistory_x[-1])
+        print("zeta: ", zeta)
+
+        # Update alpha based on previous alpha, NAGap_g_x, and OptimalityGap
+        alpha = 0.8 * self.alphaHistory_x[-1] + 0.2 * (NAGap_g_x/OptimalityGap)
+        self.alphaHistory_x.append(alpha)
+        print("alphaHistory_x: ", list(self.alphaHistory_x))
+        
+        # Update beta based on previous beta, new alpha
+        beta = 0.98 * self.betaHistory_x[-1] + 0.02 * self.alphaHistory_x[-1]
+        self.betaHistory_x.append(beta)
+        print("betaHistory_x: ", list(self.betaHistory_x))
+
+        # Update c (contraction rate) based on new beta
+        c = max(0.95, ((1 - (2 * self.betaHistory_x[-1]))/(1 - self.betaHistory_x[-1])))
+        print("c: ", c)
+
+        # Update h based on new beta
+        h = max(c + (((1 - c) / (self.betaHistory_x[-1])) * self.alphaHistory_x[-1]), 1 + ((self.alphaHistory_x[-1] - self.betaHistory_x[-1]) / (1 - self.betaHistory_x[-1])))
+        print("h: ", h)
+        
+        # Update q based on zeta and h and current iteration
+        q = pow(max(zeta , h) , (1 / (1 + 0.01 * (self.CurrentIteration - 2))))
+        #q = min(1.5, q)        If your rho is increased too fast, just activate this part and try to control the increagin rho!
+        print("q: ", q)
+
+        print("Previous rho: ", self.rho_PenaltyParameter)
+        new_rho = max(0.01, min(100, q * self.rho_PenaltyParameter))
+        self.rho_PenaltyParameter = new_rho
+        print("New rho: ", self.rho_PenaltyParameter)
+        # Update the PreviousOptimalityGap to the current value
+        self.PreviousOptimalityGap = OptimalityGap
+        print("------")
+
+    def SolveScenariosIndependently(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- SolveScenariosIndependently")
+
+        #For each scenario
+        for m in range(self.NrMIPBatch):
+            print("$$$$$$$$$$$$$$$$$$------------ m: ", m)
+            print("self.CurrentIteration: ", self.CurrentIteration)
+
+            #Update the coeffient in the objective function
+            if Constants.Quadratic_to_Linear_PHA:
+                self.UpdateLagrangianCoeff_LinearVersion(m)
+            else:
+                self.UpdateLagrangianCoeff(m)
+            mip = self.MIPSolvers[m]
+            mip.ModifyMipForScenarioTree(self.SplitedScenarioTree[m])
+
+            if Constants.Quadratic_to_Linear_PHA:
+                if self.CurrentImplementableSolution:
+                    mip.ModifyMipForFacil_LinearPHA(self.CurrentImplementableSolution.FacilityEstablishment_x_wi)
+
+            #Solve the model.
+            new_solution = mip.Solve(True)
+
+            # Dynamically initialize the deque for this MIP if it doesn't exist
+            if m not in self.LastTwoSolutionsPerMIP:
+                self.LastTwoSolutionsPerMIP[m] = deque(maxlen=2)
+
+            # Save the current solution for this MIP and keep the last two
+            self.LastTwoSolutionsPerMIP[m].append(new_solution)  # Update the deque for this MIP
+            self.CurrentSolution[m] = new_solution  # Current solution remains as it is
+
+            #compute the cost for the penalty update strategy
+            self.CurrentSolution[m].ComputeCost()
+
+    def UpdateLagrangianCoeff(self, batch):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- UpdateLagrangianCoeff")
+
+        mipsolver = self.MIPSolvers[batch]
+
+        # Initialize or retrieve storage for quadratic expressions
+        if not hasattr(mipsolver, 'quadratic_terms'):
+            mipsolver.quadratic_terms = {}
+
+        # Store the last value of rho_PenaltyParameter for this specific solver
+        if not hasattr(mipsolver, 'last_rho_PenaltyParameter'):
+            mipsolver.last_rho_PenaltyParameter = None
+
+        # Check if rho_PenaltyParameter has changed for this specific solver
+        rho_changed = self.rho_PenaltyParameter != mipsolver.last_rho_PenaltyParameter
+        if rho_changed:
+            mipsolver.last_rho_PenaltyParameter = self.rho_PenaltyParameter  # Update to the current value
+
+        # Function to handle linear and quadratic term updates
+        def update_variable(variable, new_coeff):
+            variable.setAttr(GRB.Attr.Obj, new_coeff)
+            mipsolver.LocAloc.update()
+            var_name = variable.VarName
+            
+            # Add quadratic terms only if rho_PenaltyParameter has changed or not yet added
+            if rho_changed or var_name not in mipsolver.quadratic_terms:
+                if var_name in mipsolver.quadratic_terms:
+                    old_quad_expr = mipsolver.quadratic_terms[var_name]
+                    mipsolver.LocAloc.setObjective(mipsolver.LocAloc.getObjective() - old_quad_expr)
+                    mipsolver.LocAloc.update()
+                # Create the quadratic term
+                quad_expr = (Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter *  variable * variable)
+                mipsolver.quadratic_terms[var_name] = quad_expr
+
+                # Add the quadratic term to the objective
+                mipsolver.LocAloc.setObjective(mipsolver.LocAloc.getObjective() + quad_expr)
+                mipsolver.LocAloc.update()
+        
+        # Update coefficients for the current batch
+        for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[batch]):
+
+            ###### x Variable
+            for i in self.Instance.ACFSet:
+                x_var_index = mipsolver.GetIndexACFEstablishmentVariable(scenario_index, i)
+                variable = mipsolver.ACFEstablishment_Var[x_var_index]
+                new_coeff = (
+                    mipsolver.GetACFestablishmentCoeff_Obj(i) +
+                    self.LagrangianACFEstablishment[scenario][i]
+                )
+                update_variable(variable, new_coeff)
+
+            ###### thetaVar Variable
+            for i in self.Instance.ACFSet:
+                for m in self.Instance.RescueVehicleSet:
+                    thetaVar_var_index = mipsolver.GetIndexLandRescueVehicleVariable(scenario_index, i, m)
+                    variable = mipsolver.LandRescueVehicle_Var[thetaVar_var_index]
+                    new_coeff = (
+                        mipsolver.GetlandRescueVehicleCoeff(i, m) +
+                        self.LagrangianLandRescueVehicle[scenario][i][m]
+                    )
+                    update_variable(variable, new_coeff)
+
+            ###### w Variable
+            for h in self.Instance.HospitalSet:
+                for hprime in self.Instance.HospitalSet:
+                    w_var_index = mipsolver.GetIndexBackupHospitalVariable(scenario_index, h, hprime)
+                    variable = mipsolver.BackupHospital_Var[w_var_index]
+                    new_coeff = (
+                        mipsolver.GetbackupHospitalCoeff(h, hprime) +
+                        self.LagrangianBackupHospital[scenario][h][hprime]
+                    )
+                    update_variable(variable, new_coeff)
+
+        # Set all variables to continuous for a QP problem if necessary
+        if self.SolveWithfixedACFEstablishment:
+            for var in mipsolver.LocAloc.getVars():
+                var.setAttr(GRB.Attr.VType, GRB.CONTINUOUS)
+            if Constants.Debug: print("All variables set to continuous for a QP problem.")
+
+        if Constants.Debug: print("Objective and problem type updated.")
+
+    def UpdateLagrangianCoeff_LinearVersion(self, batch):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- UpdateLagrangianCoeff")
+
+        mipsolver = self.MIPSolvers[batch]
+
+        # Store the last value of rho_PenaltyParameter for this specific solver
+        if not hasattr(mipsolver, 'last_rho_PenaltyParameter'):
+            mipsolver.last_rho_PenaltyParameter = None
+
+        # Check if rho_PenaltyParameter has changed for this specific solver
+        rho_changed = self.rho_PenaltyParameter != mipsolver.last_rho_PenaltyParameter
+        if rho_changed:
+            mipsolver.last_rho_PenaltyParameter = self.rho_PenaltyParameter  # Update to the current value
+
+        # Function to handle linear and quadratic term updates
+        def update_variable(variable, new_coeff):
+            variable.setAttr(GRB.Attr.Obj, new_coeff)
+            mipsolver.LocAloc.update()
+            var_name = variable.VarName
+            print("var_name: ", var_name)
+        
+        # Update x coefficients for the current batch
+        for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[batch]):
+            for i in self.Instance.FacilitySet:
+                x_var_index = mipsolver.GetIndexFacilityEstablishmentVariable(scenario_index, i)
+                variable = mipsolver.Facility_Establishment_Var[x_var_index]
+                new_coeff = (mipsolver.GetfacilityestablishmentCoeff(i) +
+                            self.lambda_LinearLagFacilityEstablishment[scenario][i])
+                update_variable(variable, new_coeff)
+
+        # Update z+ and z- coefficients only (if rho_changed) for the current batch
+        if rho_changed:
+            for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[batch]):
+                for i in self.Instance.FacilitySet:
+                    zPlus_var_index = mipsolver.GetIndex_PHA_ZPlus_FacilEstablishmentVariable(scenario_index, i)
+                    variable = mipsolver.PHA_ZPlus_FacilEstablishment_Var[zPlus_var_index]
+                    new_coeff = (0 + Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter)
+                    update_variable(variable, new_coeff)
+
+            for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[batch]):
+                for i in self.Instance.FacilitySet:
+                    zMinus_var_index = mipsolver.GetIndex_PHA_ZMinus_FacilEstablishmentVariable(scenario_index, i)
+                    variable = mipsolver.PHA_ZMinus_FacilEstablishment_Var[zMinus_var_index]
+                    new_coeff = (0 + Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter)
+                    update_variable(variable, new_coeff)
+
+    def CreateImplementableSolution(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- CreateImplementableSolution")
+
+        ###########
+        solfacilityEstablishment = [[-1 for i in self.Instance.FacilitySet]
+                                        for w in self.ScenarioNrSet]
+        
+        ###########
+        solproduction = [[[[-1      for j in self.Instance.DemandSet]
+                                    for i in self.Instance.FacilitySet]
+                                    for t in self.Instance.TimeBucketSet]
+                                    for w in self.ScenarioNrSet]
+        
+        ###########
+        solshortage = [[[-1 for j in self.Instance.DemandSet]
+                            for t in self.Instance.TimeBucketSet]
+                            for w in self.ScenarioNrSet]
+                    
+        # First-Stage Variables
+        ####################################### ACF Establishment
+        facilityestablishment = [(sum(self.ScenarioSet[w].Probability * 
+                                self.CurrentSolution[self.BatchofScenario[w]].FacilityEstablishment_x_wi[self.NewIndexOfScenario[w]][i] 
+                                for w in range(len(self.ScenarioSet)))\
+                                / 1)  
+                                #Here, exceptionally we devide the final value over 1 because it is the first-stage variable and it should be the same for all scenarios
+                                for i in self.Instance.FacilitySet]
+        if Constants.Debug: print("\nCurrent Value of FacilityEstablishment at node:")
+        for w in range(len(self.ScenarioSet)):
+            if Constants.Debug: print(self.CurrentSolution[self.BatchofScenario[w]].FacilityEstablishment_x_wi[self.NewIndexOfScenario[w]][:][:])
+        if Constants.Debug: print(f"Implementable Value of Facility Establishments at node: \n", facilityestablishment)
+        for w in range(len(self.ScenarioSet)):
+            for i in self.Instance.FacilitySet:
+                solfacilityEstablishment[w][i] = facilityestablishment[i]                    
+        
+        ####################################### Production
+        # if Constants.Debug: print("\nCurrent Value of Production at node:\n")
+        # for w in range(len(self.ScenarioSet)):
+        #     if Constants.Debug: print(self.CurrentSolution[self.BatchofScenario[w]].Production_y_wtij[self.NewIndexOfScenario[w]])
+
+        for w in range(len(self.ScenarioSet)):
+            for t in self.Instance.TimeBucketSet:
+                for i in self.Instance.FacilitySet:
+                    for j in self.Instance.DemandSet:
+                        solproduction[w][t][i][j] = self.CurrentSolution[self.BatchofScenario[w]].Production_y_wtij[self.NewIndexOfScenario[w]][t][i][j]
+        #print("$$$$$$$ solproduction:\n ", solproduction)
+
+        ####################################### Shortage
+        # if Constants.Debug: print("\nCurrent Value of Apheresis Assignment at node:\n")
+        # for w in range(len(self.ScenarioSet)):
+        #     if Constants.Debug: print(self.CurrentSolution[self.BatchofScenario[w]].Shortage_z_wtj[self.NewIndexOfScenario[w]])
+        
+        for w in range(len(self.ScenarioSet)):
+            for t in self.Instance.TimeBucketSet:
+                for j in self.Instance.DemandSet:
+                    solshortage[w][t][j] = self.CurrentSolution[self.BatchofScenario[w]].Shortage_z_wtj[self.NewIndexOfScenario[w]][t][j]
+        #print("$$$$$$$ solshortage:\n ", solshortage)
+
+        solution = Solution(instance=self.Instance, 
+                            solFacilityEstablishment_x_wi = solfacilityEstablishment, 
+                            solProduction_y_wtij = solproduction, 
+                            solShortage_z_wtj = solshortage, 
+                            Final_FacilityEstablishmentCost = 0, 
+                            Final_ProductionCost = 0, 
+                            Final_ShortageCost = 0, 
+                            scenarioset = self.ScenarioSet, 
+                            scenariotree = self.ScenarioTree, 
+                            partialsolution = False)
+
+        return solution
+
+    def UpdateLagragianMultipliers(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- UpdateLagragianMultipliers")
+
+        for w in self.ScenarioNrSet:
+            mm = self.BatchofScenario[w]
+            nw = self.NewIndexOfScenario[w] 
+
+            ############################# Facility Establishment
+            for i in self.Instance.FacilitySet:
+                self.lambda_LinearLagFacilityEstablishment[w][i], self.LagrangianFacilityEstablishment[w][i] = \
+                    self.ComputeLagrangian(self.lambda_LinearLagFacilityEstablishment[w][i],
+                                            self.CurrentSolution[mm].FacilityEstablishment_x_wi[nw][i],
+                                            self.CurrentImplementableSolution.FacilityEstablishment_x_wi[w][i])
+        if(Constants.Debug): 
+            print("lambda_Linear Lagrangian:\n", np.round(self.lambda_LinearLagFacilityEstablishment, 3))
+            print("The coefficient of x after combining the Quadratic and Linear penalty::\n", np.round(self.LagrangianFacilityEstablishment, 3))
+            print("----------------------")
+
+    def ComputeLagrangian(self, prevlag, independentvalue, implementablevalue):
+        #if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- ComputeLagrangian")
+        lambda_LinearLag = prevlag + (self.rho_PenaltyParameter * (independentvalue - implementablevalue))
+
+        lagrangian = lambda_LinearLag - (2 * Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter * implementablevalue)
+
+        return lambda_LinearLag, lagrangian
+    
+   #This function run the algorithm
+    def Run(self):
+        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- Run")
+        self.PrintOnlyFirstStagePreviousValue = Constants.PrintOnlyFirstStageDecision
+        if Constants.PrintOnlyFirstStageDecision:
+            Constants.PrintOnlyFirstStageDecision = False
+            # raise NameError("Progressive Hedging requires to print the full solution, set Constants.PrintOnlyFirstStageDecision to False")
+
+        self.InitTrace()
+        self.CurrentSolution = [None for w in self.ScenarioNrSet]
+
+        while not self.CheckStopingCriterion():
+            print("######################## PH Iteration: ", self.CurrentIteration)
+            # Solve each scenario independentely
+            self.SolveScenariosIndependently()
+
+            # Create an implementable solution on the scenario tree
+            self.PreviousImplementableSolution = copy.deepcopy(self.CurrentImplementableSolution)
+
+            self.CurrentImplementableSolution = self.CreateImplementableSolution()
+
+            self.CurrentIteration += 1
+
+            if self.CurrentIteration == 1:
+                    self.rho_PenaltyParameter = Constants.Rho_PH_PenaltyParameter
+
+            if (Constants.Dynamic_rho_PenaltyParameter and not Constants.Dynamic_Learning_rho_PenaltyParameter) and (self.CurrentIteration > 1) and (self.CurrentIteration % 10 == 0):
+                self.rho_PenaltyParameter += Constants.Increase_rate_dynamic_rho
+                if Constants.Debug: print(f"Updated rho_PenaltyParameter to {self.rho_PenaltyParameter} after {self.CurrentIteration} iterations.")
+            
+            if (Constants.Dynamic_Learning_rho_PenaltyParameter) and (self.CurrentIteration > 1):
+                self.UpdatePenaltyParameter_rho_x()
+
+            # Update the lagrangian multiplier
+            self.UpdateLagragianMultipliers()
+
+            #if Constants.Debug:
+            #    self.PrintCurrentIteration()
+
+        self.GivenFacilityEstablishment_Applicable = [[round(value) for value in row] for row in self.CurrentImplementableSolution.FacilityEstablishment_x_wi]
+        self.Original_MIPSolver = MIPSolver(
+                                        instance=self.Instance,
+                                        model=Constants.Two_Stage,
+                                        scenariotree=self.ScenarioTree,
+                                        nrscenario=self.TreeStructure[1],
+                                        givenfacilitylocation=self.GivenFacilityEstablishment_Applicable,
+                                        evaluatesolution=True, # I set it as True, since, only when the evaluation mode is true, it sets the x values as their Given ones.
+                                        logfile="NO"
+                                    )
+        self.Original_MIPSolver.BuildModel()
+        PHA_Final_solution = self.Original_MIPSolver.Solve(True)
+
+        self.CurrentImplementableSolution.PHCost = PHA_Final_solution.TotalCost
+
+        self.CurrentImplementableSolution.PHNrIteration = self.CurrentIteration
+        self.WriteInTraceFile("End of PH algorithm ------- Cost: %r ------------ Time (sec): %.2f" % (self.CurrentImplementableSolution.PHCost, self.duration))
+        Constants.PrintOnlyFirstStageDecision = self.PrintOnlyFirstStagePreviousValue
+
+        return self.CurrentImplementableSolution        
+
+
+
