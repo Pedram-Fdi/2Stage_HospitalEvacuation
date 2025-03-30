@@ -1,5 +1,5 @@
 
-# CRP-PLT-SDDP
+# CRP-HospitalEvacution-RL
 
 **Resilient Casualty Response Planning Considering Hospital Evacuation**
 
@@ -54,3 +54,10 @@ After generating instances, select the specific instance to solve:
 - **NrScenario**: Specifies the number of scenarios for each time period.
 - **ScenarioGeneration**: Defines the scenario generation method for in-sample scenarios. Monte Carlo is always used for out-of-sample evaluation.
 - **nrevaluation**: Number of out-of-sample scenarios used for evaluation.
+
+#### f. Additional Algorithm Parameters
+- \`PHAObj\`: Determines whether to solve the PHA using the original quadratic objective function (Q) or a linearized version (L).
+- \`PHAPenalty\`: Specifies whether to use a static parameter rho (S), dynamic rho (D), or dynamic learning rho (DL) within the PHA.
+- \`ALNSRL\`: Sets whether the ALNS approach should incorporate Reinforcement Learning (1) or solve randomly (0).
+- \`ALNSRL_DeepQ\`: If ALNS uses reinforcement learning, this parameter chooses between Q-Learning (0) or Deep Q-Learning (1).
+- \`-c, --bbcsetting\`: Determines which types of acceleration or enhancements are used in the BBC method.
