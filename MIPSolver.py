@@ -892,10 +892,7 @@ class MIPSolver(object):
                     LeftHandSide = LeftHandSide_zeta
                     
                     ############ Define the right-hand side (RHS) of the constraint
-                    if self.DemandScenarioTree.HospitalDisruption[w][h] != 1:
-                        RightHandSide = -1.0 * self.Instance.Hospital_Bed_Capacity[h]
-                    else:
-                        RightHandSide = 0
+                    RightHandSide = (1 - self.DemandScenarioTree.HospitalDisruption[w][h]) * -1.0 * self.Instance.Hospital_Bed_Capacity[h]
 
                     ############ Add the constraint to the model
                     constraint_name = f"MaxHospitalCap_w_{w}_t_{t}_h_{h}"
@@ -2100,23 +2097,330 @@ class MIPSolver(object):
         solution.GRBTime = solvetime
 
         return solution
-    
-    def UpdateDemandFlowConstraintRHS(self):
-        """
-        Update the right-hand side (RHS) of the flow conservation constraints.
-        This method will iterate over the scenarios, time buckets, and demand set to calculate and update the RHS for each constraint.
-        """
+
+    def UpdateCasualtyAllocationConstraint(self):
+        for w in self.ScenarioSet:
+            for t in self.Instance.TimeBucketSet:
+                for j in self.Instance.InjuryLevelSet:
+                    for l in self.Instance.DisasterAreaSet:
+                        # Remove the old constraint from the model
+                        if self.CasualtyAllocationConstraintNR[w][t][j][l] is not None:
+                            self.LocAloc.remove(self.CasualtyAllocationConstraintNR[w][t][j][l])
+
+                        vars_qh = [self.GetIndexCasualtyTransferVariables(w, t, j, l, h, m)
+                                    for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1
+                                    for h in self.Instance.HospitalSet if self.Instance.J_u[j][h] == 1 and self.Scenarios[w].HospitalDisruption[h] != 1]
+                        coeff_qh = [1.0 
+                                    for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1
+                                    for h in self.Instance.HospitalSet if self.Instance.J_u[j][h] == 1 and self.Scenarios[w].HospitalDisruption[h] != 1]
+
+                        vars_qi = [self.GetIndexCasualtyTransferVariables(w, t, j, l, self.Instance.NrHospitals + i, m)
+                                    for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1
+                                    for i in self.Instance.ACFSet if self.Instance.J_u[j][self.Instance.NrHospitals + i] == 1]
+                        coeff_qi = [1.0 
+                                    for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1
+                                    for i in self.Instance.ACFSet if self.Instance.J_u[j][self.Instance.NrHospitals + i] == 1]
+                        
+                        vars_mu = [self.GetIndexUnsatisfiedCasualtiesVariables(w, t, j, l)]
+                        coeff_mu = [1.0]
+
+                        vars_mu_prev = []
+                        coeff_mu_prev = []
+                        if t > 0:
+                            vars_mu_prev = [self.GetIndexUnsatisfiedCasualtiesVariables(w, t-1, j, l)]
+                            coeff_mu_prev = [-1.0]
+
+
+                        ############ Create the left-hand side of the constraint
+                        LeftHandSide_qh = gp.quicksum(coeff_qh[i] * self.CasualtyTransfer_Var[vars_qh[i]] for i in range(len(vars_qh)))
+                        LeftHandSide_qi = gp.quicksum(coeff_qi[i] * self.CasualtyTransfer_Var[vars_qi[i]] for i in range(len(vars_qi)))
+                        LeftHandSide_mu = gp.quicksum(coeff_mu[i] * self.UnsatisfiedCasualties_Var[vars_mu[i]] for i in range(len(vars_mu)))
+                        LeftHandSide_mu_prev = gp.quicksum(coeff_mu_prev[i] * self.UnsatisfiedCasualties_Var[vars_mu_prev[i]] for i in range(len(vars_mu_prev)))
+                        LeftHandSide = LeftHandSide_qh + LeftHandSide_qi + LeftHandSide_mu + LeftHandSide_mu_prev
+                        
+                        ############ Define the right-hand side (RHS) of the constraint
+                        RightHandSide = self.Scenarios[w].CasualtyDemand[t][j][l]  
+                        ############ Add the constraint to the model
+                        constraint_name = f"CasualtyAllocation_w_{w}_t_{t}_j_{j}_l_{l}"
+                        constraint = self.LocAloc.addConstr(LeftHandSide == RightHandSide, name=constraint_name)
+                        self.CasualtyAllocationConstraintNR[w][t][j][l] = constraint
+
+    def UpdatePatientAllocationConstraint(self):
+        for w in self.ScenarioSet:
+            for t in self.Instance.TimeBucketSet:
+                for j in self.Instance.InjuryLevelSet:
+                    for h in self.Instance.HospitalSet:
+                        if self.Scenarios[w].HospitalDisruption[h] == 1:
+                            # Remove the old constraint from the model
+                            if self.PatientAllocationConstraintNR[w][t][j][h] is not None:
+                                self.LocAloc.remove(self.PatientAllocationConstraintNR[w][t][j][h])
+
+                            vars_u_L_h = [self.GetIndexLandEvacuatedPatientsVariables(w, t, j, h, hprime, m)
+                                            for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1
+                                            for hprime in self.Instance.HospitalSet
+                                            if self.Instance.J_u[j][hprime] == 1 
+                                            and self.Scenarios[w].HospitalDisruption[hprime] != 1
+                                            and hprime in self.Instance.K_h.get(h, set())]
+                            coeff_u_L_h = [1.0 
+                                            for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1
+                                            for hprime in self.Instance.HospitalSet
+                                            if self.Instance.J_u[j][hprime] == 1 
+                                            and self.Scenarios[w].HospitalDisruption[hprime] != 1
+                                            and hprime in self.Instance.K_h.get(h, set())]
+
+                            vars_u_A = [self.GetIndexAerialEvacuatedPatientsVariables(w, t, j, h, i, hprime, m)
+                                        for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1
+                                        for hprime in self.Instance.HospitalSet if self.Instance.J_u[j][hprime] == 1 and self.Scenarios[w].HospitalDisruption[hprime] != 1  and hprime in self.Instance.K_h.get(h, set())  # Ensure hprime is in K_h[h]
+                                        for i in self.Instance.ACFSet if i in self.Instance.I_A_Set]
+                            coeff_u_A = [1.0 
+                                        for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1
+                                        for hprime in self.Instance.HospitalSet if self.Instance.J_u[j][hprime] == 1 and self.Scenarios[w].HospitalDisruption[hprime] != 1  and hprime in self.Instance.K_h.get(h, set())  # Ensure hprime is in K_h[h]
+                                        for i in self.Instance.ACFSet if i in self.Instance.I_A_Set]
+                                                        
+                            vars_u_L_i = [self.GetIndexLandEvacuatedPatientsVariables(w, t, j, h, self.Instance.NrHospitals + i, m)
+                                            for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1
+                                            for i in self.Instance.ACFSet if self.Instance.J_u[j][self.Instance.NrHospitals + i] == 1]
+                            coeff_u_L_i = [1.0 
+                                            for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1
+                                            for i in self.Instance.ACFSet if self.Instance.J_u[j][self.Instance.NrHospitals + i] == 1]
+
+
+                            vars_Phi = [self.GetIndexUnevacuatedPatientsVariables(w, t, j, h)]
+                            coeff_Phi = [1.0]
+
+                            vars_Phi_prev = []
+                            coeff_Phi_prev = []
+                            if t > 0:
+                                vars_Phi_prev = [self.GetIndexUnevacuatedPatientsVariables(w, t-1, j, h)]
+                                coeff_Phi_prev = [-1.0]
+
+                            ############ Create the left-hand side of the constraint
+                            LeftHandSide_u_L_h = gp.quicksum(coeff_u_L_h[i] * self.LandEvacuatedPatients_Var[vars_u_L_h[i]] for i in range(len(vars_u_L_h)))
+                            LeftHandSide_u_A = gp.quicksum(coeff_u_A[i] * self.AerialEvacuatedPatients_Var[vars_u_A[i]] for i in range(len(vars_u_A)))
+                            LeftHandSide_u_L_i = gp.quicksum(coeff_u_L_i[i] * self.LandEvacuatedPatients_Var[vars_u_L_i[i]] for i in range(len(vars_u_L_i)))
+                            LeftHandSide_Phi = gp.quicksum(coeff_Phi[i] * self.UnevacuatedPatients_Var[vars_Phi[i]] for i in range(len(vars_Phi)))
+                            LeftHandSide_Phi_prev = gp.quicksum(coeff_Phi_prev[i] * self.UnevacuatedPatients_Var[vars_Phi_prev[i]] for i in range(len(vars_Phi_prev)))
+                            LeftHandSide = LeftHandSide_u_L_h + LeftHandSide_u_A + LeftHandSide_u_L_i + LeftHandSide_Phi + LeftHandSide_Phi_prev
+                            
+                            ############ Define the right-hand side (RHS) of the constraint
+                            if t == 0:
+                                RightHandSide = self.Scenarios[w].PatientDemand[j][h]  
+                            else:
+                                RightHandSide = 0
+                            ############ Add the constraint to the model
+                            constraint_name = f"PatientAllocation_w_{w}_t_{t}_j_{j}_h_{h}"
+                            constraint = self.LocAloc.addConstr(LeftHandSide == RightHandSide, name=constraint_name)
+                            self.PatientAllocationConstraintNR[w][t][j][h] = constraint
+
+    def UpdateMaxHospitalCapConstraint(self):
+
         for w_idx, w in enumerate(self.ScenarioSet):
             for t_idx, t in enumerate(self.Instance.TimeBucketSet):
-                for j_idx, j in enumerate(self.Instance.DemandSet):
+                for h_idx, h in enumerate(self.Instance.HospitalSet):
                     # Calculate the new right-hand side for the constraint
-                    righthandside = self.Scenarios[w].Demand[t][j]
+                    righthandside = (1 - self.Scenarios[w].HospitalDisruption[h]) * -1.0 * self.Instance.Hospital_Bed_Capacity[h]
                     # Retrieve the constraint reference
-                    constr_ref = self.DemandFlowConstraintNR[w_idx][t_idx][j_idx]
+                    constr_ref = self.MaxHospitalCapConstraintNR[w_idx][t_idx][h_idx]
                     # Update the RHS of the constraint
                     constr_ref.RHS = righthandside
-        if Constants.Debug:
-            print("RHS of demand flow constraints updated.")
+    
+    def UpdateDischargedHospitalConstraint(self):
+        for w in self.ScenarioSet:
+            for t in self.Instance.TimeBucketSet:
+                for h in self.Instance.HospitalSet:
+                    for j in self.Instance.InjuryLevelSet:
+                        if self.Instance.J_u[j][h] == 1:
+                            # Remove the old constraint from the model
+                            if self.DischargedHospitalConstraintNR[w][t][h][j] is not None:
+                                self.LocAloc.remove(self.DischargedHospitalConstraintNR[w][t][h][j])                            
+
+                            vars_sigmaVar = [self.GetIndexDischargedPatientsVariables(w, t, j, h)]
+                            coeff_sigmaVar = [-1.0]
+
+                            vars_q = [self.GetIndexCasualtyTransferVariables(w, t - k, j, l, h, m)
+                                        for l in self.Instance.DisasterAreaSet
+                                        for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1  # Ensure m is valid for j
+                                        for k in range(t + 1)]
+                            coeff_q = [1.0 * self.Scenarios[w].PatientDischargedPercentage[k][j][h] 
+                                        for l in self.Instance.DisasterAreaSet
+                                        for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1  # Ensure m is valid for j
+                                        for k in range(t + 1)]
+
+                            vars_u_L = [self.GetIndexLandEvacuatedPatientsVariables(w, t - k, j, hprime, h, m)
+                                        for hprime in self.Instance.HospitalSet
+                                        for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1  # Ensure m is valid for j
+                                        for k in range(t + 1)]
+                            coeff_u_L = [1.0 * self.Scenarios[w].PatientDischargedPercentage[k][j][h] 
+                                        for hprime in self.Instance.HospitalSet
+                                        for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1  # Ensure m is valid for j
+                                        for k in range(t + 1)]
+
+                            vars_u_A = [self.GetIndexAerialEvacuatedPatientsVariables(w, t - k, j, hprime, i, h, m)
+                                        for i in self.Instance.ACFSet if i in self.Instance.I_A_Set   
+                                        for hprime in self.Instance.HospitalSet
+                                        for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1  # Ensure m is valid for j
+                                        for k in range(t + 1)]
+                            coeff_u_A = [1.0 * self.Scenarios[w].PatientDischargedPercentage[k][j][h] 
+                                        for i in self.Instance.ACFSet if i in self.Instance.I_A_Set   
+                                        for hprime in self.Instance.HospitalSet
+                                        for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1  # Ensure m is valid for j
+                                        for k in range(t + 1)]             
+                                                                                        
+                            ############ Create the left-hand side of the constraint
+                            LeftHandSide_sigmaVar = gp.quicksum(coeff_sigmaVar[i] * self.DischargedPatients_Var[vars_sigmaVar[i]] for i in range(len(vars_sigmaVar)))
+                            LeftHandSide_q = gp.quicksum(coeff_q[i] * self.CasualtyTransfer_Var[vars_q[i]] for i in range(len(vars_q)))
+                            LeftHandSide_u_L = gp.quicksum(coeff_u_L[i] * self.LandEvacuatedPatients_Var[vars_u_L[i]] for i in range(len(vars_u_L)))
+                            LeftHandSide_u_A = gp.quicksum(coeff_u_A[i] * self.AerialEvacuatedPatients_Var[vars_u_A[i]] for i in range(len(vars_u_A)))
+                            LeftHandSide = LeftHandSide_sigmaVar + LeftHandSide_q + LeftHandSide_u_L + LeftHandSide_u_A
+                            
+                            ############ Define the right-hand side (RHS) of the constraint
+                            RightHandSide = 0
+
+                            ############ Add the constraint to the model
+                            constraint_name = f"DischargedHospital_w_{w}_t_{t}_h_{h}_j_{j}"
+                            constraint = self.LocAloc.addConstr(LeftHandSide >= RightHandSide, name=constraint_name)
+                            self.DischargedHospitalConstraintNR[w][t][h][j] = constraint
+
+    def UpdateDischargedACFConstraint(self):
+        for w in self.ScenarioSet:
+            for t in self.Instance.TimeBucketSet:
+                for i in self.Instance.ACFSet:
+                    for j in self.Instance.InjuryLevelSet:
+                        if self.Instance.J_u[j][self.Instance.NrHospitals + i] == 1:
+                            # Remove the old constraint from the model
+                            if self.DischargedACFConstraintNR[w][t][i][j] is not None:
+                                self.LocAloc.remove(self.DischargedACFConstraintNR[w][t][i][j]) 
+
+                            vars_sigmaVar = [self.GetIndexDischargedPatientsVariables(w, t, j, self.Instance.NrHospitals + i)]
+                            coeff_sigmaVar = [-1.0]
+
+                            vars_q = [self.GetIndexCasualtyTransferVariables(w, t - k, j, l, self.Instance.NrHospitals + i, m)
+                                        for l in self.Instance.DisasterAreaSet
+                                        for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1  # Ensure m is valid for j
+                                        for k in range(t + 1)]
+                            coeff_q = [1.0 * self.Scenarios[w].PatientDischargedPercentage[k][j][self.Instance.NrHospitals + i] 
+                                        for l in self.Instance.DisasterAreaSet
+                                        for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1  # Ensure m is valid for j
+                                        for k in range(t + 1)]
+
+                            vars_u_L = [self.GetIndexLandEvacuatedPatientsVariables(w, t - k, j, h, self.Instance.NrHospitals + i, m)
+                                        for h in self.Instance.HospitalSet
+                                        for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1  # Ensure m is valid for j
+                                        for k in range(t + 1)]
+                            coeff_u_L = [1.0 * self.Scenarios[w].PatientDischargedPercentage[k][j][self.Instance.NrHospitals + i] 
+                                        for h in self.Instance.HospitalSet
+                                        for m in self.Instance.RescueVehicleSet if self.Instance.J_m[j][m] == 1  # Ensure m is valid for j
+                                        for k in range(t + 1)]       
+                                                                                        
+                            ############ Create the left-hand side of the constraint
+                            LeftHandSide_sigmaVar = gp.quicksum(coeff_sigmaVar[i] * self.DischargedPatients_Var[vars_sigmaVar[i]] for i in range(len(vars_sigmaVar)))
+                            LeftHandSide_q = gp.quicksum(coeff_q[i] * self.CasualtyTransfer_Var[vars_q[i]] for i in range(len(vars_q)))
+                            LeftHandSide_u_L = gp.quicksum(coeff_u_L[i] * self.LandEvacuatedPatients_Var[vars_u_L[i]] for i in range(len(vars_u_L)))
+                            LeftHandSide = LeftHandSide_sigmaVar + LeftHandSide_q + LeftHandSide_u_L
+                            
+                            ############ Define the right-hand side (RHS) of the constraint
+                            RightHandSide = 0
+
+                            ############ Add the constraint to the model
+                            constraint_name = f"DischargedACF_w_{w}_t_{t}_i_{i}_j_{j}"
+                            constraint = self.LocAloc.addConstr(LeftHandSide >= RightHandSide, name=constraint_name)
+                            self.DischargedACFConstraintNR[w][t][i][j] = constraint
+
+    def UpdateLandResVehicleCapHosConstraint(self):
+        for w in self.ScenarioSet:
+            for t in self.Instance.TimeBucketSet:
+                for h in self.Instance.HospitalSet:
+                    for m in self.Instance.RescueVehicleSet:
+                        # Remove the old constraint from the model
+                        if self.LandResVehicleCapHosConstraintNR[w][t][h][m] is not None:
+                            self.LocAloc.remove(self.LandResVehicleCapHosConstraintNR[w][t][h][m])                         
+
+                        vars_q = []
+                        coeff_q = []
+                        if self.Scenarios[w].HospitalDisruption[h] != 1:
+                            vars_q = [self.GetIndexCasualtyTransferVariables(w, t, j, l, h, m)
+                                        for l in self.Instance.DisasterAreaSet
+                                        for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][h] == 1]
+                            coeff_q = [-1.0 * self.Instance.Time_D_H_Land[l][h]
+                                        for l in self.Instance.DisasterAreaSet
+                                        for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][h] == 1]
+                        
+                        vars_u_L_Hos = []
+                        coeff_u_L_Hos = []
+                        vars_u_A = []
+                        coeff_u_A = []
+                        vars_u_L_ACF = []
+                        coeff_u_L_ACF = []
+                        if self.Scenarios[w].HospitalDisruption[h] == 1:
+                            vars_u_L_Hos = [self.GetIndexLandEvacuatedPatientsVariables(w, t, j, h, hprime, m)
+                                            for hprime in self.Instance.HospitalSet if hprime in self.Instance.K_h.get(h, set())
+                                            for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][h] == 1]
+                            coeff_u_L_Hos = [-1.0 * self.Instance.Time_H_H_Land[h][hprime]
+                                            for hprime in self.Instance.HospitalSet if hprime in self.Instance.K_h.get(h, set())
+                                            for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][h] == 1]
+                                                        
+                            vars_u_A = [self.GetIndexAerialEvacuatedPatientsVariables(w, t, j, h, i, hprime, m)
+                                        for i in self.Instance.ACFSet if i in self.Instance.I_A_Set   
+                                        for hprime in self.Instance.HospitalSet if hprime in self.Instance.K_h.get(h, set())
+                                        for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][h] == 1]
+                            coeff_u_A = [-1.0 * self.Instance.Time_A_H_Land[i][h]
+                                        for i in self.Instance.ACFSet if i in self.Instance.I_A_Set   
+                                        for hprime in self.Instance.HospitalSet if hprime in self.Instance.K_h.get(h, set())
+                                        for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][h] == 1]
+                                                        
+                            vars_u_L_ACF = [self.GetIndexLandEvacuatedPatientsVariables(w, t, j, h, self.Instance.NrHospitals + i, m)
+                                            for i in self.Instance.ACFSet
+                                            for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][self.Instance.NrHospitals + i] == 1]
+                            coeff_u_L_ACF = [-1.0 * self.Instance.Time_A_H_Land[i][h]
+                                            for i in self.Instance.ACFSet
+                                            for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][self.Instance.NrHospitals + i] == 1]
+                                                
+                        ############ Create the left-hand side of the constraint
+                        LeftHandSide_q = gp.quicksum(coeff_q[i] * self.CasualtyTransfer_Var[vars_q[i]] for i in range(len(vars_q)))                    
+                        LeftHandSide_u_L_Hos = gp.quicksum(coeff_u_L_Hos[i] * self.LandEvacuatedPatients_Var[vars_u_L_Hos[i]] for i in range(len(vars_u_L_Hos)))                        
+                        LeftHandSide_u_A = gp.quicksum(coeff_u_A[i] * self.AerialEvacuatedPatients_Var[vars_u_A[i]] for i in range(len(vars_u_A)))
+                        LeftHandSide_u_L_ACF = gp.quicksum(coeff_u_L_ACF[i] * self.LandEvacuatedPatients_Var[vars_u_L_ACF[i]] for i in range(len(vars_u_L_ACF)))
+                        LeftHandSide = LeftHandSide_q + LeftHandSide_u_L_Hos + LeftHandSide_u_A + LeftHandSide_u_L_ACF
+                        
+                        ############ Define the right-hand side (RHS) of the constraint
+                        RightHandSide = -1.0 * self.Instance.Land_Rescue_Vehicle_Capacity[m] * self.Instance.Number_Land_Rescue_Vehicle_Hospital[m][h] 
+
+                        ############ Add the constraint to the model
+                        constraint_name = f"LandResVehicleCapHos_w_{w}_t_{t}_h_{h}_m_{m}"
+                        constraint = self.LocAloc.addConstr(LeftHandSide >= RightHandSide, name=constraint_name)
+                        self.LandResVehicleCapHosConstraintNR[w][t][h][m] = constraint
+
+    def UpdateAerialResVehicleCapConstraint(self):
+        for w in self.ScenarioSet:
+            for t in self.Instance.TimeBucketSet:
+                for h in self.Instance.HospitalSet:
+                    if self.Scenarios[w].HospitalDisruption[h] == 1:
+                        # Remove the old constraint from the model
+                        if self.AerialResVehicleCapConstraintNR[w][t][h] is not None:
+                            self.LocAloc.remove(self.AerialResVehicleCapConstraintNR[w][t][h])    
+
+                        vars_u_A = [self.GetIndexAerialEvacuatedPatientsVariables(w, t, j, h, i, hprime, m)
+                                    for m in self.Instance.RescueVehicleSet   
+                                    for i in self.Instance.ACFSet if i in self.Instance.I_A_Set   
+                                    for hprime in self.Instance.HospitalSet if hprime in self.Instance.K_h.get(h, set()) and self.DemandScenarioTree.HospitalDisruption[w][hprime] != 1
+                                    for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][h] == 1]
+                        coeff_u_A = [-1.0 * self.Instance.Time_A_H_Aerial[i][hprime]
+                                    for m in self.Instance.RescueVehicleSet   
+                                    for i in self.Instance.ACFSet if i in self.Instance.I_A_Set   
+                                    for hprime in self.Instance.HospitalSet if hprime in self.Instance.K_h.get(h, set()) and self.DemandScenarioTree.HospitalDisruption[w][hprime] != 1
+                                    for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][h] == 1]
+                                                                              
+                        ############ Create the left-hand side of the constraint
+                        LeftHandSide_u_A = gp.quicksum(coeff_u_A[i] * self.AerialEvacuatedPatients_Var[vars_u_A[i]] for i in range(len(vars_u_A)))                    
+                        LeftHandSide = LeftHandSide_u_A
+                        
+                        ############ Define the right-hand side (RHS) of the constraint
+                        RightHandSide = -1.0 * self.Instance.Aerial_Rescue_Vehicle_Capacity[0] * self.Instance.Available_Aerial_Vehicles_Hospital[h] 
+
+                        ############ Add the constraint to the model
+                        constraint_name = f"AerialResVehicleCap_w_{w}_t_{t}_h_{h}"
+                        constraint = self.LocAloc.addConstr(LeftHandSide >= RightHandSide, name=constraint_name)
+                        self.AerialResVehicleCapConstraintNR[w][t][h] = constraint
 
     def ModifyMipForScenarioTree(self, scenariotree):
         if Constants.Debug: print("\n We are in 'MIPSolver' Class -- ModifyMipForScenarioTree")
@@ -2131,8 +2435,14 @@ class MIPSolver(object):
         self.ScenarioSet = range(self.NrScenario)
         if Constants.Debug: print(f"ScenarioSet range set to 0 to {self.NrScenario - 1}.")
 
-        # Update the right-hand side (RHS) of the flow conservation constraints using the new method
-        self.UpdateDemandFlowConstraintRHS()
+        # Update Constraints for new scenarios
+        self.UpdateCasualtyAllocationConstraint()
+        self.UpdatePatientAllocationConstraint()
+        self.UpdateMaxHospitalCapConstraint()
+        self.UpdateDischargedHospitalConstraint()
+        self.UpdateDischargedACFConstraint()
+        self.UpdateLandResVehicleCapHosConstraint()
+        self.UpdateAerialResVehicleCapConstraint()
 
         self.LocAloc.update()   
     

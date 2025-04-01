@@ -700,66 +700,196 @@ class ProgressiveHedging(object):
         if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- CreateImplementableSolution")
 
         ###########
-        solfacilityEstablishment = [[-1 for i in self.Instance.FacilitySet]
+        solACFEstablishment = [[-1 for i in self.Instance.ACFSet]
+                                        for w in self.ScenarioNrSet]
+        ###########
+        sollandRescueVehicle = [[[-1 for m in self.Instance.RescueVehicleSet]
+                                        for i in self.Instance.ACFSet]
+                                        for w in self.ScenarioNrSet]
+        ###########
+        solbackupHospital = [[[-1 for hprime in self.Instance.HospitalSet]
+                                        for h in self.Instance.HospitalSet]
                                         for w in self.ScenarioNrSet]
         
         ###########
-        solproduction = [[[[-1      for j in self.Instance.DemandSet]
-                                    for i in self.Instance.FacilitySet]
-                                    for t in self.Instance.TimeBucketSet]
-                                    for w in self.ScenarioNrSet]
+        solcasualtyTransfer = [[[[[[-1      for m in self.Instance.RescueVehicleSet]
+                                            for u in self.Instance.MedFacilitySet]
+                                            for l in self.Instance.DisasterAreaSet]
+                                            for j in self.Instance.InjuryLevelSet]
+                                            for t in self.Instance.TimeBucketSet]
+                                            for w in self.ScenarioNrSet]
+        ###########
+        solunsatisfiedCasualties = [[[[-1      for l in self.Instance.DisasterAreaSet]
+                                                for j in self.Instance.InjuryLevelSet]
+                                                for t in self.Instance.TimeBucketSet]
+                                                for w in self.ScenarioNrSet]
+        ###########
+        soldischargedPatients = [[[[-1      for u in self.Instance.MedFacilitySet]
+                                            for j in self.Instance.InjuryLevelSet]
+                                            for t in self.Instance.TimeBucketSet]
+                                            for w in self.ScenarioNrSet]
+        ###########
+        sollandEvacuatedPatients = [[[[[[-1      for m in self.Instance.RescueVehicleSet]
+                                                for u in self.Instance.MedFacilitySet]
+                                                for h in self.Instance.HospitalSet]
+                                                for j in self.Instance.InjuryLevelSet]
+                                                for t in self.Instance.TimeBucketSet]
+                                                for w in self.ScenarioNrSet]
+        ###########
+        solaerialEvacuatedPatients = [[[[[[[-1      for m in self.Instance.RescueVehicleSet]
+                                                    for hprime in self.Instance.HospitalSet]
+                                                    for i in self.Instance.ACFSet]
+                                                    for h in self.Instance.HospitalSet]
+                                                    for j in self.Instance.InjuryLevelSet]
+                                                    for t in self.Instance.TimeBucketSet]
+                                                    for w in self.ScenarioNrSet]
         
         ###########
-        solshortage = [[[-1 for j in self.Instance.DemandSet]
-                            for t in self.Instance.TimeBucketSet]
-                            for w in self.ScenarioNrSet]
+        solunevacuatedPatients = [[[[-1      for h in self.Instance.HospitalSet]
+                                                for j in self.Instance.InjuryLevelSet]
+                                                for t in self.Instance.TimeBucketSet]
+                                                for w in self.ScenarioNrSet]
+        
+        ###########
+        solavailableCapFacility = [[[-1      for u in self.Instance.MedFacilitySet]
+                                            for t in self.Instance.TimeBucketSet]
+                                            for w in self.ScenarioNrSet]
                     
         # First-Stage Variables
         ####################################### ACF Establishment
-        facilityestablishment = [(sum(self.ScenarioSet[w].Probability * 
-                                self.CurrentSolution[self.BatchofScenario[w]].FacilityEstablishment_x_wi[self.NewIndexOfScenario[w]][i] 
+        ACFestablishment = [(sum(self.ScenarioSet[w].Probability * 
+                                self.CurrentSolution[self.BatchofScenario[w]].ACFEstablishment_x_wi[self.NewIndexOfScenario[w]][i] 
                                 for w in range(len(self.ScenarioSet)))\
                                 / 1)  
                                 #Here, exceptionally we devide the final value over 1 because it is the first-stage variable and it should be the same for all scenarios
-                                for i in self.Instance.FacilitySet]
+                                for i in self.Instance.ACFSet]
+        if Constants.Debug: print("\nCurrent Value of ACFEstablishment at node:")
+        for w in range(len(self.ScenarioSet)):
+            if Constants.Debug: print(self.CurrentSolution[self.BatchofScenario[w]].ACFEstablishment_x_wi[self.NewIndexOfScenario[w]])
+        if Constants.Debug: print(f"Implementable Value of Facility Establishments at node: \n", ACFestablishment)
+        for w in range(len(self.ScenarioSet)):
+            for i in self.Instance.ACFSet:
+                solACFEstablishment[w][i] = ACFestablishment[i]                    
+        
+        ####################################### Land Rescue Vehicle
+        landRescueVehicle = [[(sum(self.ScenarioSet[w].Probability * 
+                                self.CurrentSolution[self.BatchofScenario[w]].LandRescueVehicle_thetaVar_wim[self.NewIndexOfScenario[w]][i][m] 
+                                for w in range(len(self.ScenarioSet)))\
+                                / 1)  
+                                #Here, exceptionally we devide the final value over 1 because it is the first-stage variable and it should be the same for all scenarios
+                                for m in self.Instance.RescueVehicleSet]
+                                for i in self.Instance.ACFSet]
         if Constants.Debug: print("\nCurrent Value of FacilityEstablishment at node:")
         for w in range(len(self.ScenarioSet)):
-            if Constants.Debug: print(self.CurrentSolution[self.BatchofScenario[w]].FacilityEstablishment_x_wi[self.NewIndexOfScenario[w]][:][:])
-        if Constants.Debug: print(f"Implementable Value of Facility Establishments at node: \n", facilityestablishment)
+            if Constants.Debug: print(self.CurrentSolution[self.BatchofScenario[w]].LandRescueVehicle_thetaVar_wim[self.NewIndexOfScenario[w]])
+        if Constants.Debug: print(f"Implementable Value of Facility Establishments at node: \n", landRescueVehicle)
         for w in range(len(self.ScenarioSet)):
-            for i in self.Instance.FacilitySet:
-                solfacilityEstablishment[w][i] = facilityestablishment[i]                    
+            for i in self.Instance.ACFSet:
+                for m in self.Instance.RescueVehicleSet:
+                    sollandRescueVehicle[w][i][m] = landRescueVehicle[i][m]                   
         
-        ####################################### Production
-        # if Constants.Debug: print("\nCurrent Value of Production at node:\n")
-        # for w in range(len(self.ScenarioSet)):
-        #     if Constants.Debug: print(self.CurrentSolution[self.BatchofScenario[w]].Production_y_wtij[self.NewIndexOfScenario[w]])
+        ####################################### Backup Hospital
+        backupHospital = [[(sum(self.ScenarioSet[w].Probability * 
+                                self.CurrentSolution[self.BatchofScenario[w]].BackupHospital_W_whhPrime[self.NewIndexOfScenario[w]][h][hprime] 
+                                for w in range(len(self.ScenarioSet)))\
+                                / 1)  
+                                #Here, exceptionally we devide the final value over 1 because it is the first-stage variable and it should be the same for all scenarios
+                                for hprime in self.Instance.HospitalSet]
+                                for h in self.Instance.HospitalSet]
+        if Constants.Debug: print("\nCurrent Value of FacilityEstablishment at node:")
+        for w in range(len(self.ScenarioSet)):
+            if Constants.Debug: print(self.CurrentSolution[self.BatchofScenario[w]].BackupHospital_W_whhPrime[self.NewIndexOfScenario[w]])
+        if Constants.Debug: print(f"Implementable Value of Facility Establishments at node: \n", backupHospital)
+        for w in range(len(self.ScenarioSet)):
+            for h in self.Instance.HospitalSet:
+                for hprime in self.Instance.HospitalSet:
+                    solbackupHospital[w][h][hprime] = backupHospital[h][hprime]                   
 
+
+        ####################################### solcasualtyTransfer
         for w in range(len(self.ScenarioSet)):
             for t in self.Instance.TimeBucketSet:
-                for i in self.Instance.FacilitySet:
-                    for j in self.Instance.DemandSet:
-                        solproduction[w][t][i][j] = self.CurrentSolution[self.BatchofScenario[w]].Production_y_wtij[self.NewIndexOfScenario[w]][t][i][j]
-        #print("$$$$$$$ solproduction:\n ", solproduction)
+                for j in self.Instance.InjuryLevelSet:
+                    for l in self.Instance.DisasterAreaSet:
+                        for u in self.Instance.MedFacilitySet:
+                            for m in self.Instance.RescueVehicleSet:
+                                solcasualtyTransfer[w][t][j][l][u][m] = self.CurrentSolution[self.BatchofScenario[w]].CasualtyTransfer_q_wtjlum[self.NewIndexOfScenario[w]][t][j][l][u][m]
+        if Constants.Debug: print("$$$$$$$ solcasualtyTransfer:\n ", solcasualtyTransfer)
 
-        ####################################### Shortage
-        # if Constants.Debug: print("\nCurrent Value of Apheresis Assignment at node:\n")
-        # for w in range(len(self.ScenarioSet)):
-        #     if Constants.Debug: print(self.CurrentSolution[self.BatchofScenario[w]].Shortage_z_wtj[self.NewIndexOfScenario[w]])
-        
+        ####################################### solunsatisfiedCasualties
         for w in range(len(self.ScenarioSet)):
             for t in self.Instance.TimeBucketSet:
-                for j in self.Instance.DemandSet:
-                    solshortage[w][t][j] = self.CurrentSolution[self.BatchofScenario[w]].Shortage_z_wtj[self.NewIndexOfScenario[w]][t][j]
-        #print("$$$$$$$ solshortage:\n ", solshortage)
+                for j in self.Instance.InjuryLevelSet:
+                    for l in self.Instance.DisasterAreaSet:
+                        solunsatisfiedCasualties[w][t][j][l] = self.CurrentSolution[self.BatchofScenario[w]].UnsatisfiedCasualties_mu_wtjl[self.NewIndexOfScenario[w]][t][j][l]
+        if Constants.Debug: print("$$$$$$$ solunsatisfiedCasualties:\n ", solunsatisfiedCasualties)
+
+        ####################################### soldischargedPatients
+        for w in range(len(self.ScenarioSet)):
+            for t in self.Instance.TimeBucketSet:
+                for j in self.Instance.InjuryLevelSet:
+                    for u in self.Instance.MedFacilitySet:
+                        soldischargedPatients[w][t][j][u] = self.CurrentSolution[self.BatchofScenario[w]].DischargedPatients_sigmaVar_wtju[self.NewIndexOfScenario[w]][t][j][u]
+        if Constants.Debug: print("$$$$$$$ soldischargedPatients:\n ", soldischargedPatients)
+
+        ####################################### sollandEvacuatedPatients
+        for w in range(len(self.ScenarioSet)):
+            for t in self.Instance.TimeBucketSet:
+                for j in self.Instance.InjuryLevelSet:
+                    for h in self.Instance.HospitalSet:
+                        for u in self.Instance.MedFacilitySet:
+                            for m in self.Instance.RescueVehicleSet:
+                                sollandEvacuatedPatients[w][t][j][h][u][m] = self.CurrentSolution[self.BatchofScenario[w]].LandEvacuatedPatients_u_L_wtjhum[self.NewIndexOfScenario[w]][t][j][h][u][m]
+        if Constants.Debug: print("$$$$$$$ sollandEvacuatedPatients:\n ", sollandEvacuatedPatients)
+
+        ####################################### solaerialEvacuatedPatients
+        for w in range(len(self.ScenarioSet)):
+            for t in self.Instance.TimeBucketSet:
+                for j in self.Instance.InjuryLevelSet:
+                    for h in self.Instance.HospitalSet:
+                        for i in self.Instance.ACFSet:
+                            for hprime in self.Instance.HospitalSet:
+                                for m in self.Instance.RescueVehicleSet:
+                                    solaerialEvacuatedPatients[w][t][j][h][i][hprime][m] = self.CurrentSolution[self.BatchofScenario[w]].AerialEvacuatedPatients_u_A_wtjhihPrimem[self.NewIndexOfScenario[w]][t][j][h][i][hprime][m]
+        if Constants.Debug: print("$$$$$$$ solaerialEvacuatedPatients:\n ", solaerialEvacuatedPatients)
+
+        ####################################### solunevacuatedPatients
+        for w in range(len(self.ScenarioSet)):
+            for t in self.Instance.TimeBucketSet:
+                for j in self.Instance.InjuryLevelSet:
+                    for h in self.Instance.HospitalSet:
+                        solunevacuatedPatients[w][t][j][h] = self.CurrentSolution[self.BatchofScenario[w]].UnevacuatedPatients_Phi_wtjh[self.NewIndexOfScenario[w]][t][j][h]
+        if Constants.Debug: print("$$$$$$$ solunevacuatedPatients:\n ", solunevacuatedPatients)
+
+        ####################################### solavailableCapFacility
+        for w in range(len(self.ScenarioSet)):
+            for t in self.Instance.TimeBucketSet:
+                for u in self.Instance.MedFacilitySet:
+                    solavailableCapFacility[w][t][u] = self.CurrentSolution[self.BatchofScenario[w]].AvailableCapFacility_zeta_wtu[self.NewIndexOfScenario[w]][t][u]
+        if Constants.Debug: print("$$$$$$$ solavailableCapFacility:\n ", solavailableCapFacility)
+
 
         solution = Solution(instance=self.Instance, 
-                            solFacilityEstablishment_x_wi = solfacilityEstablishment, 
-                            solProduction_y_wtij = solproduction, 
-                            solShortage_z_wtj = solshortage, 
-                            Final_FacilityEstablishmentCost = 0, 
-                            Final_ProductionCost = 0, 
-                            Final_ShortageCost = 0, 
+                            solACFEstablishment_x_wi = solACFEstablishment, 
+                            solLandRescueVehicle_thetaVar_wim = sollandRescueVehicle, 
+                            solBackupHospital_W_whhPrime = solbackupHospital, 
+                            solCasualtyTransfer_q_wtjlum = solcasualtyTransfer, 
+                            solUnsatisfiedCasualties_mu_wtjl = solunsatisfiedCasualties, 
+                            solDischargedPatients_sigmaVar_wtju = soldischargedPatients, 
+                            solLandEvacuatedPatients_u_L_wtjhum = sollandEvacuatedPatients, 
+                            solAerialEvacuatedPatients_u_A_wtjhihPrimem = solaerialEvacuatedPatients, 
+                            solUnevacuatedPatients_Phi_wtjh = solunevacuatedPatients, 
+                            solAvailableCapFacility_zeta_wtu = solavailableCapFacility, 
+                            Final_ACFEstablishmentCost = 0, 
+                            Final_LandRescueVehicleCost = 0, 
+                            Final_BackupHospitalCost = 0, 
+                            Final_CasualtyTransferCost = 0, 
+                            Final_UnsatisfiedCasualtiesCost = 0, 
+                            Final_DischargedPatientsCost = 0, 
+                            Final_LandEvacuatedPatientsCost = 0, 
+                            Final_AerialEvacuatedPatientsCost = 0, 
+                            Final_UnevacuatedPatientsCost = 0, 
+                            Final_AvailableCapFacilityCost = 0, 
                             scenarioset = self.ScenarioSet, 
                             scenariotree = self.ScenarioTree, 
                             partialsolution = False)
@@ -773,6 +903,18 @@ class ProgressiveHedging(object):
             mm = self.BatchofScenario[w]
             nw = self.NewIndexOfScenario[w] 
 
+            ############################# ACF Establishment
+            for i in self.Instance.ACFSet:
+                self.lambda_LinearLagACFEstablishment[w][i], self.LagrangianACFEstablishment[w][i] = \
+                    self.ComputeLagrangian(self.lambda_LinearLagACFEstablishment[w][i],
+                                            self.CurrentSolution[mm].ACFEstablishment_x_wi[nw][i],
+                                            self.CurrentImplementableSolution.ACFEstablishment_x_wi[w][i])
+            ############################# Facility Establishment
+            for i in self.Instance.FacilitySet:
+                self.lambda_LinearLagFacilityEstablishment[w][i], self.LagrangianFacilityEstablishment[w][i] = \
+                    self.ComputeLagrangian(self.lambda_LinearLagFacilityEstablishment[w][i],
+                                            self.CurrentSolution[mm].FacilityEstablishment_x_wi[nw][i],
+                                            self.CurrentImplementableSolution.FacilityEstablishment_x_wi[w][i])
             ############################# Facility Establishment
             for i in self.Instance.FacilitySet:
                 self.lambda_LinearLagFacilityEstablishment[w][i], self.LagrangianFacilityEstablishment[w][i] = \
@@ -781,7 +923,8 @@ class ProgressiveHedging(object):
                                             self.CurrentImplementableSolution.FacilityEstablishment_x_wi[w][i])
         if(Constants.Debug): 
             print("lambda_Linear Lagrangian:\n", np.round(self.lambda_LinearLagFacilityEstablishment, 3))
-            print("The coefficient of x after combining the Quadratic and Linear penalty::\n", np.round(self.LagrangianFacilityEstablishment, 3))
+            print("The coefficient of x after combining the Quadratic and Linear penalty::\n", 
+                  np.round(self.LagrangianFacilityEstablishment, 3))
             print("----------------------")
 
     def ComputeLagrangian(self, prevlag, independentvalue, implementablevalue):
