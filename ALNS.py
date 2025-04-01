@@ -496,7 +496,8 @@ class ALNS:
                 #print(f"Swap operator: Swapped {num_swaps} ones and zeros.")
 
         # To Check if the budget constraint is respected
-        x_solution = self.round_x_variable(x_solution, RandomRemoval=True)
+        x_solution_i = self.round_x_variable(x_solution[0], RandomRemoval=True)
+        x_solution = [x_solution_i[:] for _ in self.scenario_set]        
         if Constants.Debug: print("Modified x_solution:", x_solution)
         
         return x_solution
@@ -506,15 +507,15 @@ class ALNS:
         Apply the selected destroy and repair operators to the integer variable thetaVar_solution.
         """
         # Step 1: Check connection between x_solution and thetaVar_solution
-        thetaVar_solution = self.check_connection_between_x_and_thetaVar(x_solution, thetaVar_solution)
+        thetaVar_solution = self.check_connection_between_x_and_thetaVar(x_solution[0], thetaVar_solution[0])
         
         # Step 2: Apply the "Decrease" action (if applicable) on thetaVar_solution
         if integer_destroy_action == "Decrease":
             for i in self.Instance.ACFSet:
                 for m in self.Instance.RescueVehicleSet:
-                    if thetaVar_solution[0][i][m] > 0:
-                        decrease_amount = random.randint(0, thetaVar_solution[0][i][m])  # Randomly decrease between 0 and current value
-                        thetaVar_solution[0][i][m] -= decrease_amount
+                    if thetaVar_solution[i][m] > 0:
+                        decrease_amount = random.randint(0, thetaVar_solution[i][m])  # Randomly decrease between 0 and current value
+                        thetaVar_solution[i][m] -= decrease_amount
                         #print(f"Decreased {decrease_amount} vehicles for ACF {i}, vehicle type {m}.")
         else:
             # "NoChange": do nothing.
@@ -523,16 +524,16 @@ class ALNS:
         # Step 3: Apply the "Increase" action (if applicable) on thetaVar_solution
         if integer_repair_action == "Increase":
             # First, calculate the total number of vehicles already assigned and the remaining vehicles
-            remaining_vehicles = {m: self.Instance.Number_Rescue_Vehicle_ACF[m] - sum(thetaVar_solution[0][i][m] for i in self.Instance.ACFSet) 
+            remaining_vehicles = {m: self.Instance.Number_Rescue_Vehicle_ACF[m] - sum(thetaVar_solution[i][m] for i in self.Instance.ACFSet) 
                                 for m in self.Instance.RescueVehicleSet}
 
             # Step 3.1: Assign 30% of the remaining vehicles to ACFs with no vehicles assigned yet
             for m in self.Instance.RescueVehicleSet:
                 if remaining_vehicles[m] > 0:
                     for i in self.Instance.ACFSet:
-                        if x_solution[0][i] == 1 and sum(thetaVar_solution[0][i][m] for m in self.Instance.RescueVehicleSet) == 0:
+                        if x_solution[0][i] == 1 and sum(thetaVar_solution[i][m] for m in self.Instance.RescueVehicleSet) == 0:
                             assign_amount = int(0.30 * remaining_vehicles[m])  # 30% of the remaining vehicles
-                            thetaVar_solution[0][i][m] += assign_amount
+                            thetaVar_solution[i][m] += assign_amount
                             remaining_vehicles[m] -= assign_amount
                             #print(f"Assigned {assign_amount} vehicles of type {m} to ACF {i} (30% allocation).")
                         
@@ -558,7 +559,7 @@ class ALNS:
                                     max_assignable = remaining_vehicles[m]  # Don't exceed the remaining vehicles available
                                 
                                 if max_assignable > 0:
-                                    thetaVar_solution[0][i][m] += max_assignable
+                                    thetaVar_solution[i][m] += max_assignable
                                     remaining_vehicles[m] -= max_assignable
                                     #print(f"Assigned {max_assignable} vehicles of type {m} to ACF {i}.")
                                 
@@ -569,7 +570,8 @@ class ALNS:
             # "NoChange": do nothing.
             pass
         
-        thetaVar_solution = self.check_limited_number_of_rescue_vehicles(thetaVar_solution)
+        thetaVar_solution_mi = self.check_limited_number_of_rescue_vehicles(thetaVar_solution)
+        thetaVar_solution = [thetaVar_solution_mi[:][:] for _ in self.scenario_set]
 
         return thetaVar_solution
 
@@ -634,7 +636,7 @@ class ALNS:
                 print(f"Worse solution rejected with probability {prob_accept:.4f} <= {r:.4f}")
                 return False
 
-    def Check_ACF_Establishment_Budget_Constraint(self, x_var, Rounded_x_var_row, RandomRemoval=False):
+    def Check_ACF_Establishment_Budget_Constraint(self, x_var_i, Rounded_x_var_row, RandomRemoval=False):
         """
         Check the budget constraint for ACF establishment. If the sum exceeds the budget, 
         remove the ACFs with the lowest x_var value one by one until the budget is met.
@@ -649,7 +651,7 @@ class ALNS:
         # If RandomRemoval is False, use the existing approach (remove based on smallest x_var values)
         if not RandomRemoval:
             # Filter out the elements of x_var where the value is zero
-            value_index_pairs = [(x_var[i], i) for i in self.Instance.ACFSet if x_var[i] > 0]
+            value_index_pairs = [(x_var_i[i], i) for i in self.Instance.ACFSet if x_var_i[i] > 0]
             
             # Sort by x_var value in ascending order (smallest values first)
             value_index_pairs.sort()  # Sort based on x_var value
@@ -666,7 +668,7 @@ class ALNS:
         
         # If RandomRemoval is True, remove ACFs randomly until the budget is satisfied
         else:
-            acf_indices = [i for i in self.Instance.ACFSet if x_var[i] > 0]  # Indices of ACFs that are established
+            acf_indices = [i for i in self.Instance.ACFSet if x_var_i[i] > 0]  # Indices of ACFs that are established
             random.shuffle(acf_indices)  # Shuffle the ACFs to remove them randomly
             
             for i in acf_indices:
@@ -681,47 +683,38 @@ class ALNS:
         # After modifying, if we still don't meet the budget, return the modified rounded x solution
         return Rounded_x_var_row
 
-    def round_x_variable(self, x_var, RandomRemoval=False):
+    def round_x_variable(self, x_var_i, RandomRemoval=False):
         """
         Rounds each value in a 2D variable using math.ceil and checks the budget constraint.
         Optimized by checking and adjusting the rounding for w=0, then copying to all w.
         """
         # Round the x_var using math.ceil
-        Rounded_x_var = [[math.ceil(val) for val in row] for row in x_var]
+        Rounded_x_var = [math.ceil(val) for val in x_var_i]
 
         # Check and adjust the rounding for w=0
-        Rounded_x_var[0] = self.Check_ACF_Establishment_Budget_Constraint(x_var[0], Rounded_x_var[0])
-
-        # Copy the adjusted values from w=0 to all other w in ScenarioSet
-        for w in self.scenario_set:
-            if w != 0:  # No need to change w=0 since it's already adjusted
-                Rounded_x_var[w] = Rounded_x_var[0]
+        Rounded_x_var = self.Check_ACF_Establishment_Budget_Constraint(x_var_i, Rounded_x_var)
 
         return Rounded_x_var
 
-    def check_connection_between_x_and_thetaVar(self, Rounded_ACFEstablishment_x_wi, Rounded_thetaVar):
+    def check_connection_between_x_and_thetaVar(self, Rounded_ACFEstablishment_x_i, Rounded_thetaVar_im):
         """
         Ensure that if an ACF is not established (x[0][i] == 0), then no vehicles are assigned to it (thetaVar[0][m][i] == 0).
         """
         for i in self.Instance.ACFSet:
-            if Rounded_ACFEstablishment_x_wi[0][i] == 0:  # If ACF i is not established
+            if Rounded_ACFEstablishment_x_i[i] == 0:  # If ACF i is not established
                 for m in self.Instance.RescueVehicleSet:  # For each rescue vehicle
-                    Rounded_thetaVar[0][i][m] = 0  # Set vehicles to 0 if the ACF is not established
-        
-        # Copy the updated values from Rounded_thetaVar[0] to all other scenarios
-        for w in self.scenario_set:
-            Rounded_thetaVar[w] = list(Rounded_thetaVar[0])  # Copy the values for all w
-            
-        return Rounded_thetaVar
+                    Rounded_thetaVar_im[i][m] = 0  # Set vehicles to 0 if the ACF is not established
+
+        return Rounded_thetaVar_im
     
-    def check_limited_number_of_rescue_vehicles(self, Rounded_thetaVar):
+    def check_limited_number_of_rescue_vehicles(self, Rounded_thetaVar_im):
         """
         Ensure that the number of vehicles assigned to each ACF does not exceed the available number of rescue vehicles.
         If exceeded, reduce the assignments starting with ACFs with lower capacities (smallest first).
         """
         for m in self.Instance.RescueVehicleSet:
             # Calculate the total number of vehicles assigned to ACF m in scenario 0
-            total_assigned = sum(Rounded_thetaVar[0][i][m] for i in self.Instance.ACFSet)
+            total_assigned = sum(Rounded_thetaVar_im[i][m] for i in self.Instance.ACFSet)
             
             if total_assigned > self.Instance.Number_Rescue_Vehicle_ACF[m]:
                 # If the total number of vehicles exceeds the available capacity, reduce the surplus
@@ -736,66 +729,62 @@ class ALNS:
                     for _, i in acf_with_capacity:
                         if surplus <= 0:
                             break  # Stop if surplus is reduced to 0
-                        if Rounded_thetaVar[0][i][m] > 0:
-                            reduction = min(1, Rounded_thetaVar[0][i][m])  # Reduce by 1 at a time
-                            Rounded_thetaVar[0][i][m] -= reduction
+                        if Rounded_thetaVar_im[i][m] > 0:
+                            reduction = min(1, Rounded_thetaVar_im[i][m])  # Reduce by 1 at a time
+                            Rounded_thetaVar_im[i][m] -= reduction
                             surplus -= reduction
 
-        # Copy the updated values from Rounded_thetaVar[0] to all other scenarios
-        for w in self.scenario_set:
-            Rounded_thetaVar[w] = list(Rounded_thetaVar[0])  # Copy the values for all w
-            
-        return Rounded_thetaVar
+        return Rounded_thetaVar_im
 
-    def Check_LandRescueVehicleAllocation_Constraints(self, Rounded_ACFEstablishment_x_wi, Rounded_thetaVar):
+    def Check_LandRescueVehicleAllocation_Constraints(self, Rounded_ACFEstablishment_x_i, Rounded_thetaVar_im):
         """
         Check the constraints for the land rescue vehicle allocation:
         1. Ensure that if an ACF is not established (x = 0), then no vehicles are assigned (thetaVar = 0).
         2. Ensure that the total number of vehicles assigned to each ACF does not exceed the available vehicles.
         """
         # Step 1: Check the connection between x and thetaVar
-        Rounded_thetaVar = self.check_connection_between_x_and_thetaVar(Rounded_ACFEstablishment_x_wi, Rounded_thetaVar)
+        Rounded_thetaVar_im = self.check_connection_between_x_and_thetaVar(Rounded_ACFEstablishment_x_i, Rounded_thetaVar_im)
         
         # Step 2: Check and adjust the total number of vehicles assigned to each ACF
-        Rounded_thetaVar = self.check_limited_number_of_rescue_vehicles(Rounded_thetaVar)
+        Rounded_thetaVar_im = self.check_limited_number_of_rescue_vehicles(Rounded_thetaVar_im)
         
-        return Rounded_thetaVar
+        return Rounded_thetaVar_im
 
-    def round_thetaVar_variable(self, Rounded_ACFEstablishment_x_wi, thetaVar_var):
+    def round_thetaVar_variable(self, Rounded_ACFEstablishment_x_i, thetaVar_var):
         """
         Rounds each value in a 3D variable using math.ceil and checks the land rescue vehicle allocation constraints.
         """
-        Rounded_thetaVar = [[[math.ceil(val) for val in inner] for inner in outer] for outer in thetaVar_var]
+        Rounded_thetaVar = [[math.ceil(val) for val in inner] for inner in thetaVar_var]
         
         # Check the land rescue vehicle allocation constraints
-        Rounded_thetaVar = self.Check_LandRescueVehicleAllocation_Constraints(Rounded_ACFEstablishment_x_wi, Rounded_thetaVar)
+        Rounded_thetaVar = self.Check_LandRescueVehicleAllocation_Constraints(Rounded_ACFEstablishment_x_i, Rounded_thetaVar)
         
         return Rounded_thetaVar
     
-    def Check_Hospitals_Compatibility_Constraint(self, Rounded_w):
+    def Check_Hospitals_Compatibility_Constraint(self, Rounded_w_hhprime):
         """
         Ensure that if w_[omega][h][h'] = 1, then hospital h' must be compatible with hospital h.
         If not, set w_[omega][h][h'] to 0.
         """
-        for omega in self.scenario_set:
-            for h in self.Instance.HospitalSet:
-                for h_prime in self.Instance.HospitalSet:
-                    if Rounded_w[omega][h][h_prime] == 1:
-                        # Check compatibility
-                        if h_prime not in self.Instance.K_h.get(h, set()):
-                            Rounded_w[omega][h][h_prime] = 0  # Set to 0 if not compatible
-        return Rounded_w
+        for h in self.Instance.HospitalSet:
+            for h_prime in self.Instance.HospitalSet:
+                if Rounded_w_hhprime[h][h_prime] == 1:
+                    # Check compatibility
+                    if h_prime not in self.Instance.K_h.get(h, set()):
+                        Rounded_w_hhprime[h][h_prime] = 0  # Set to 0 if not compatible
+        
+        return Rounded_w_hhprime
 
-    def round_w_variable(self, w_var):
+    def round_w_variable(self, w_var_hhprime):
         """
         Rounds each value in a 3D variable using math.ceil and checks the hospital compatibility constraint.
         """
-        Rounded_w = [[[math.ceil(val) for val in inner] for inner in outer] for outer in w_var]
+        Rounded_w_hhprime = [[math.ceil(val) for val in inner] for inner in w_var_hhprime]
 
         # Now, call the Check_Hospitals_Compatibility_Constraint method to ensure compatibility
-        Rounded_w = self.Check_Hospitals_Compatibility_Constraint(Rounded_w)
+        Rounded_w_hhprime = self.Check_Hospitals_Compatibility_Constraint(Rounded_w_hhprime)
         
-        return Rounded_w
+        return Rounded_w_hhprime
 
     def Run(self):
         # To prevent obtaining the second-stage variables' values at every iteratrion of the ALNS
@@ -813,20 +802,35 @@ class ALNS:
 
         # Step 2: Round relaxed solution to nearest integer (initial feasible solution)
         ACF_establishment_x_wi = relaxed_solution.ACFEstablishment_x_wi
-        Rounded_ACFEstablishment_x_wi = self.round_x_variable(ACF_establishment_x_wi)
+        Rounded_ACFEstablishment_x_i = self.round_x_variable(ACF_establishment_x_wi[0])
         if Constants.Debug:print("Rounded_ACFEstablishment_x_wi:\n", Rounded_ACFEstablishment_x_wi)
-        
+
         landRescueVehicle_thetaVar_wim = relaxed_solution.LandRescueVehicle_thetaVar_wim
-        Rounded_LandRescueVehicle_x_wi = self.round_thetaVar_variable(Rounded_ACFEstablishment_x_wi, landRescueVehicle_thetaVar_wim)
-        if Constants.Debug:print("Rounded_LandRescueVehicle_x_wi:\n", Rounded_LandRescueVehicle_x_wi)
-        
+        Rounded_LandRescueVehicle_thetaVar_im = self.round_thetaVar_variable(Rounded_ACFEstablishment_x_i, landRescueVehicle_thetaVar_wim[0])
+        if Constants.Debug:print("Rounded_LandRescueVehicle_thetaVar_im:\n", Rounded_LandRescueVehicle_thetaVar_im)
+
         backupHospital_W_whhPrime = relaxed_solution.BackupHospital_W_whhPrime
-        Rounded_BackupHospital_x_wi = self.round_w_variable(backupHospital_W_whhPrime)
-        if Constants.Debug:print("Rounded_BackupHospital_x_wi:\n", Rounded_BackupHospital_x_wi)
+        Rounded_BackupHospital_W_hhprime = self.round_w_variable(backupHospital_W_whhPrime[0])
+        if Constants.Debug:print("Rounded_BackupHospital_W_whhprime:\n", Rounded_BackupHospital_W_whhprime)
+
+        # Initialize empty lists for the 2D and 3D results
+        Rounded_ACFEstablishment_x_wi = []
+        Rounded_LandRescueVehicle_thetaVar_wim = []
+        Rounded_BackupHospital_W_whhprime = []
+
+        # Replicate the rounded values from scenario 0 to all scenarios in one loop
+        for _ in self.scenario_set:
+            # For x, we need a copy of the 1D list
+            Rounded_ACFEstablishment_x_wi.append(Rounded_ACFEstablishment_x_i[:])
+            # For thetaVar, which is 2D, make a deep copy of each row
+            Rounded_LandRescueVehicle_thetaVar_wim.append([row[:] for row in Rounded_LandRescueVehicle_thetaVar_im])
+            # For w, which is 2D, similarly make a deep copy
+            Rounded_BackupHospital_W_whhprime.append([row[:] for row in Rounded_BackupHospital_W_hhprime])
+
 
         self.fix_First_Stage_Variables(Rounded_ACFEstablishment_x_wi, 
-                                       Rounded_LandRescueVehicle_x_wi, 
-                                       Rounded_BackupHospital_x_wi)
+                                       Rounded_LandRescueVehicle_thetaVar_wim, 
+                                       Rounded_BackupHospital_W_whhprime)
         fixed_solution = self.solve_fixed_mip()
 
         # Initialize the current solution, best solution, and global best solution.

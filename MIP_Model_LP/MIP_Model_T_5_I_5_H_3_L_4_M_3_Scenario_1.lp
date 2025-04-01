@@ -1,17 +1,17 @@
 \ Model LocationAllocation
 \ LP format - for model browsing. Use MPS format to capture full model detail.
 Minimize
-  0.067 x_w_0_i_0_index_0 + 0.072 x_w_0_i_1_index_1
-   + 0.112 x_w_0_i_2_index_2 + 0.134 x_w_0_i_3_index_3
-   + 0.082 x_w_0_i_4_index_4 + 0.001 thetaVar_w_0_i_0_m_0_index_5
+  0.067 x_w_0_i_0_index_0 + 0.04 x_w_0_i_1_index_1 + 0.112 x_w_0_i_2_index_2
+   + 0.166 x_w_0_i_3_index_3 + 0.114 x_w_0_i_4_index_4
+   + 0.001 thetaVar_w_0_i_0_m_0_index_5
    + 0.001 thetaVar_w_0_i_0_m_1_index_6
    + 0.001 thetaVar_w_0_i_0_m_2_index_7
    + 0.001 thetaVar_w_0_i_1_m_0_index_8
    + 0.001 thetaVar_w_0_i_1_m_1_index_9
-   - 0.047 thetaVar_w_0_i_1_m_2_index_10
+   - 0.143 thetaVar_w_0_i_1_m_2_index_10
    + 0.001 thetaVar_w_0_i_2_m_0_index_11
    + 0.001 thetaVar_w_0_i_2_m_1_index_12
-   - 0.149 thetaVar_w_0_i_2_m_2_index_13
+   - 0.183 thetaVar_w_0_i_2_m_2_index_13
    + 0.001 thetaVar_w_0_i_3_m_0_index_14
    + 0.001 thetaVar_w_0_i_3_m_1_index_15
    + 0.001 thetaVar_w_0_i_3_m_2_index_16
@@ -19,8 +19,8 @@ Minimize
    + 0.001 thetaVar_w_0_i_4_m_1_index_18
    + 0.001 thetaVar_w_0_i_4_m_2_index_19 + 1000 W_w_0_h_0_h'_0_index_20
    + 862 W_w_0_h_0_h'_1_index_23 + 539 W_w_0_h_0_h'_2_index_26
-   + 538.006 W_w_0_h_1_h'_0_index_21 + 1000 W_w_0_h_1_h'_1_index_24
-   + 741 W_w_0_h_1_h'_2_index_27 + 880.006 W_w_0_h_2_h'_0_index_22
+   + 538.038 W_w_0_h_1_h'_0_index_21 + 1000 W_w_0_h_1_h'_1_index_24
+   + 741 W_w_0_h_1_h'_2_index_27 + 880.038 W_w_0_h_2_h'_0_index_22
    + 649 W_w_0_h_2_h'_1_index_25 + 1000 W_w_0_h_2_h'_2_index_28
    + 27.79 q_w_0_t_0_j_0_l_0_u_0_m_0_index_29
    + 27.79 q_w_0_t_0_j_0_l_0_u_0_m_1_index_30

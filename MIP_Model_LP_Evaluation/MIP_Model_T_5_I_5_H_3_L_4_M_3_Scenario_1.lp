@@ -13103,10 +13103,10 @@ Subject To
    - u_A_w_0_t_4_j_1_h_2_i_3_h'_1_m_1_index_3165
    - u_A_w_0_t_4_j_1_h_2_i_3_h'_1_m_2_index_3166 >= 0
  CopyGivenACFEstablishment_w_0_i_0: x_w_0_i_0_index_0 = 0
- CopyGivenACFEstablishment_w_0_i_1: x_w_0_i_1_index_1 = 0
+ CopyGivenACFEstablishment_w_0_i_1: x_w_0_i_1_index_1 = 1
  CopyGivenACFEstablishment_w_0_i_2: x_w_0_i_2_index_2 = 1
- CopyGivenACFEstablishment_w_0_i_3: x_w_0_i_3_index_3 = 1
- CopyGivenACFEstablishment_w_0_i_4: x_w_0_i_4_index_4 = 1
+ CopyGivenACFEstablishment_w_0_i_3: x_w_0_i_3_index_3 = 0
+ CopyGivenACFEstablishment_w_0_i_4: x_w_0_i_4_index_4 = 0
  CopyGivenNrLandRescueVehicle_w_0_i_0_m_0: thetaVar_w_0_i_0_m_0_index_5
    = 0
  CopyGivenNrLandRescueVehicle_w_0_i_0_m_1: thetaVar_w_0_i_0_m_1_index_6
@@ -13118,13 +13118,13 @@ Subject To
  CopyGivenNrLandRescueVehicle_w_0_i_1_m_1: thetaVar_w_0_i_1_m_1_index_9
    = 0
  CopyGivenNrLandRescueVehicle_w_0_i_1_m_2: thetaVar_w_0_i_1_m_2_index_10
-   = 0
+   = 2
  CopyGivenNrLandRescueVehicle_w_0_i_2_m_0: thetaVar_w_0_i_2_m_0_index_11
    = 0
  CopyGivenNrLandRescueVehicle_w_0_i_2_m_1: thetaVar_w_0_i_2_m_1_index_12
-   = 11
+   = 0
  CopyGivenNrLandRescueVehicle_w_0_i_2_m_2: thetaVar_w_0_i_2_m_2_index_13
-   = 15
+   = 18
  CopyGivenNrLandRescueVehicle_w_0_i_3_m_0: thetaVar_w_0_i_3_m_0_index_14
    = 0
  CopyGivenNrLandRescueVehicle_w_0_i_3_m_1: thetaVar_w_0_i_3_m_1_index_15
@@ -13140,10 +13140,10 @@ Subject To
  CopyGivenBackupHospital_w_0_h_0_h'_0: W_w_0_h_0_h'_0_index_20 = 0
  CopyGivenBackupHospital_w_0_h_0_h'_1: W_w_0_h_0_h'_1_index_23 = 0
  CopyGivenBackupHospital_w_0_h_0_h'_2: W_w_0_h_0_h'_2_index_26 = 0
- CopyGivenBackupHospital_w_0_h_1_h'_0: W_w_0_h_1_h'_0_index_21 = 1
+ CopyGivenBackupHospital_w_0_h_1_h'_0: W_w_0_h_1_h'_0_index_21 = 0
  CopyGivenBackupHospital_w_0_h_1_h'_1: W_w_0_h_1_h'_1_index_24 = 0
  CopyGivenBackupHospital_w_0_h_1_h'_2: W_w_0_h_1_h'_2_index_27 = 0
- CopyGivenBackupHospital_w_0_h_2_h'_0: W_w_0_h_2_h'_0_index_22 = 1
+ CopyGivenBackupHospital_w_0_h_2_h'_0: W_w_0_h_2_h'_0_index_22 = 0
  CopyGivenBackupHospital_w_0_h_2_h'_1: W_w_0_h_2_h'_1_index_25 = 0
  CopyGivenBackupHospital_w_0_h_2_h'_2: W_w_0_h_2_h'_2_index_28 = 0
 Bounds

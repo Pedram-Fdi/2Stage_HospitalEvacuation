@@ -64063,382 +64063,295 @@ Subject To
    - u_A_w_4_t_4_j_1_h_2_i_3_h'_1_m_0_index_15880
    - u_A_w_4_t_4_j_1_h_2_i_3_h'_1_m_1_index_15881
    - u_A_w_4_t_4_j_1_h_2_i_3_h'_1_m_2_index_15882 >= 0
- Nonanticipativity_x_w1_0_w2_1_i_0: x_w_0_i_0_index_0 - x_w_1_i_0_index_5
+ CopyGivenACFEstablishment_w_0_i_0: x_w_0_i_0_index_0 = 0
+ CopyGivenACFEstablishment_w_1_i_0: x_w_1_i_0_index_5 = 0
+ CopyGivenACFEstablishment_w_2_i_0: x_w_2_i_0_index_10 = 0
+ CopyGivenACFEstablishment_w_3_i_0: x_w_3_i_0_index_15 = 0
+ CopyGivenACFEstablishment_w_4_i_0: x_w_4_i_0_index_20 = 0
+ CopyGivenACFEstablishment_w_0_i_1: x_w_0_i_1_index_1 = 1
+ CopyGivenACFEstablishment_w_1_i_1: x_w_1_i_1_index_6 = 1
+ CopyGivenACFEstablishment_w_2_i_1: x_w_2_i_1_index_11 = 1
+ CopyGivenACFEstablishment_w_3_i_1: x_w_3_i_1_index_16 = 1
+ CopyGivenACFEstablishment_w_4_i_1: x_w_4_i_1_index_21 = 1
+ CopyGivenACFEstablishment_w_0_i_2: x_w_0_i_2_index_2 = 1
+ CopyGivenACFEstablishment_w_1_i_2: x_w_1_i_2_index_7 = 1
+ CopyGivenACFEstablishment_w_2_i_2: x_w_2_i_2_index_12 = 1
+ CopyGivenACFEstablishment_w_3_i_2: x_w_3_i_2_index_17 = 1
+ CopyGivenACFEstablishment_w_4_i_2: x_w_4_i_2_index_22 = 1
+ CopyGivenACFEstablishment_w_0_i_3: x_w_0_i_3_index_3 = 0
+ CopyGivenACFEstablishment_w_1_i_3: x_w_1_i_3_index_8 = 0
+ CopyGivenACFEstablishment_w_2_i_3: x_w_2_i_3_index_13 = 0
+ CopyGivenACFEstablishment_w_3_i_3: x_w_3_i_3_index_18 = 0
+ CopyGivenACFEstablishment_w_4_i_3: x_w_4_i_3_index_23 = 0
+ CopyGivenACFEstablishment_w_0_i_4: x_w_0_i_4_index_4 = 0
+ CopyGivenACFEstablishment_w_1_i_4: x_w_1_i_4_index_9 = 0
+ CopyGivenACFEstablishment_w_2_i_4: x_w_2_i_4_index_14 = 0
+ CopyGivenACFEstablishment_w_3_i_4: x_w_3_i_4_index_19 = 0
+ CopyGivenACFEstablishment_w_4_i_4: x_w_4_i_4_index_24 = 0
+ CopyGivenNrLandRescueVehicle_w_0_i_0_m_0: thetaVar_w_0_i_0_m_0_index_25
    = 0
- Nonanticipativity_x_w1_0_w2_1_i_1: x_w_0_i_1_index_1 - x_w_1_i_1_index_6
+ CopyGivenNrLandRescueVehicle_w_0_i_0_m_1: thetaVar_w_0_i_0_m_1_index_26
    = 0
- Nonanticipativity_x_w1_0_w2_1_i_2: x_w_0_i_2_index_2 - x_w_1_i_2_index_7
+ CopyGivenNrLandRescueVehicle_w_0_i_0_m_2: thetaVar_w_0_i_0_m_2_index_27
    = 0
- Nonanticipativity_x_w1_0_w2_1_i_3: x_w_0_i_3_index_3 - x_w_1_i_3_index_8
+ CopyGivenNrLandRescueVehicle_w_0_i_1_m_0: thetaVar_w_0_i_1_m_0_index_28
    = 0
- Nonanticipativity_x_w1_0_w2_1_i_4: x_w_0_i_4_index_4 - x_w_1_i_4_index_9
+ CopyGivenNrLandRescueVehicle_w_0_i_1_m_1: thetaVar_w_0_i_1_m_1_index_29
    = 0
- Nonanticipativity_x_w1_1_w2_2_i_0: x_w_1_i_0_index_5 - x_w_2_i_0_index_10
+ CopyGivenNrLandRescueVehicle_w_0_i_1_m_2: thetaVar_w_0_i_1_m_2_index_30
+   = 2
+ CopyGivenNrLandRescueVehicle_w_0_i_2_m_0: thetaVar_w_0_i_2_m_0_index_31
    = 0
- Nonanticipativity_x_w1_1_w2_2_i_1: x_w_1_i_1_index_6 - x_w_2_i_1_index_11
+ CopyGivenNrLandRescueVehicle_w_0_i_2_m_1: thetaVar_w_0_i_2_m_1_index_32
    = 0
- Nonanticipativity_x_w1_1_w2_2_i_2: x_w_1_i_2_index_7 - x_w_2_i_2_index_12
+ CopyGivenNrLandRescueVehicle_w_0_i_2_m_2: thetaVar_w_0_i_2_m_2_index_33
+   = 18
+ CopyGivenNrLandRescueVehicle_w_0_i_3_m_0: thetaVar_w_0_i_3_m_0_index_34
    = 0
- Nonanticipativity_x_w1_1_w2_2_i_3: x_w_1_i_3_index_8 - x_w_2_i_3_index_13
+ CopyGivenNrLandRescueVehicle_w_0_i_3_m_1: thetaVar_w_0_i_3_m_1_index_35
    = 0
- Nonanticipativity_x_w1_1_w2_2_i_4: x_w_1_i_4_index_9 - x_w_2_i_4_index_14
+ CopyGivenNrLandRescueVehicle_w_0_i_3_m_2: thetaVar_w_0_i_3_m_2_index_36
    = 0
- Nonanticipativity_x_w1_2_w2_3_i_0: x_w_2_i_0_index_10 - x_w_3_i_0_index_15
+ CopyGivenNrLandRescueVehicle_w_0_i_4_m_0: thetaVar_w_0_i_4_m_0_index_37
    = 0
- Nonanticipativity_x_w1_2_w2_3_i_1: x_w_2_i_1_index_11 - x_w_3_i_1_index_16
+ CopyGivenNrLandRescueVehicle_w_0_i_4_m_1: thetaVar_w_0_i_4_m_1_index_38
    = 0
- Nonanticipativity_x_w1_2_w2_3_i_2: x_w_2_i_2_index_12 - x_w_3_i_2_index_17
+ CopyGivenNrLandRescueVehicle_w_0_i_4_m_2: thetaVar_w_0_i_4_m_2_index_39
    = 0
- Nonanticipativity_x_w1_2_w2_3_i_3: x_w_2_i_3_index_13 - x_w_3_i_3_index_18
+ CopyGivenNrLandRescueVehicle_w_1_i_0_m_0: thetaVar_w_1_i_0_m_0_index_40
    = 0
- Nonanticipativity_x_w1_2_w2_3_i_4: x_w_2_i_4_index_14 - x_w_3_i_4_index_19
+ CopyGivenNrLandRescueVehicle_w_1_i_0_m_1: thetaVar_w_1_i_0_m_1_index_41
    = 0
- Nonanticipativity_x_w1_3_w2_4_i_0: x_w_3_i_0_index_15 - x_w_4_i_0_index_20
+ CopyGivenNrLandRescueVehicle_w_1_i_0_m_2: thetaVar_w_1_i_0_m_2_index_42
    = 0
- Nonanticipativity_x_w1_3_w2_4_i_1: x_w_3_i_1_index_16 - x_w_4_i_1_index_21
+ CopyGivenNrLandRescueVehicle_w_1_i_1_m_0: thetaVar_w_1_i_1_m_0_index_43
    = 0
- Nonanticipativity_x_w1_3_w2_4_i_2: x_w_3_i_2_index_17 - x_w_4_i_2_index_22
+ CopyGivenNrLandRescueVehicle_w_1_i_1_m_1: thetaVar_w_1_i_1_m_1_index_44
    = 0
- Nonanticipativity_x_w1_3_w2_4_i_3: x_w_3_i_3_index_18 - x_w_4_i_3_index_23
+ CopyGivenNrLandRescueVehicle_w_1_i_1_m_2: thetaVar_w_1_i_1_m_2_index_45
+   = 2
+ CopyGivenNrLandRescueVehicle_w_1_i_2_m_0: thetaVar_w_1_i_2_m_0_index_46
    = 0
- Nonanticipativity_x_w1_3_w2_4_i_4: x_w_3_i_4_index_19 - x_w_4_i_4_index_24
+ CopyGivenNrLandRescueVehicle_w_1_i_2_m_1: thetaVar_w_1_i_2_m_1_index_47
    = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_0_m_0:
-   thetaVar_w_0_i_0_m_0_index_25 - thetaVar_w_1_i_0_m_0_index_40 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_0_m_1:
-   thetaVar_w_0_i_0_m_1_index_26 - thetaVar_w_1_i_0_m_1_index_41 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_0_m_2:
-   thetaVar_w_0_i_0_m_2_index_27 - thetaVar_w_1_i_0_m_2_index_42 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_1_m_0:
-   thetaVar_w_0_i_1_m_0_index_28 - thetaVar_w_1_i_1_m_0_index_43 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_1_m_1:
-   thetaVar_w_0_i_1_m_1_index_29 - thetaVar_w_1_i_1_m_1_index_44 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_1_m_2:
-   thetaVar_w_0_i_1_m_2_index_30 - thetaVar_w_1_i_1_m_2_index_45 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_2_m_0:
-   thetaVar_w_0_i_2_m_0_index_31 - thetaVar_w_1_i_2_m_0_index_46 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_2_m_1:
-   thetaVar_w_0_i_2_m_1_index_32 - thetaVar_w_1_i_2_m_1_index_47 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_2_m_2:
-   thetaVar_w_0_i_2_m_2_index_33 - thetaVar_w_1_i_2_m_2_index_48 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_3_m_0:
-   thetaVar_w_0_i_3_m_0_index_34 - thetaVar_w_1_i_3_m_0_index_49 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_3_m_1:
-   thetaVar_w_0_i_3_m_1_index_35 - thetaVar_w_1_i_3_m_1_index_50 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_3_m_2:
-   thetaVar_w_0_i_3_m_2_index_36 - thetaVar_w_1_i_3_m_2_index_51 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_4_m_0:
-   thetaVar_w_0_i_4_m_0_index_37 - thetaVar_w_1_i_4_m_0_index_52 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_4_m_1:
-   thetaVar_w_0_i_4_m_1_index_38 - thetaVar_w_1_i_4_m_1_index_53 = 0
- Nonanticipativity_thetaVar_w1_0_w2_1_i_4_m_2:
-   thetaVar_w_0_i_4_m_2_index_39 - thetaVar_w_1_i_4_m_2_index_54 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_0_m_0:
-   thetaVar_w_1_i_0_m_0_index_40 - thetaVar_w_2_i_0_m_0_index_55 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_0_m_1:
-   thetaVar_w_1_i_0_m_1_index_41 - thetaVar_w_2_i_0_m_1_index_56 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_0_m_2:
-   thetaVar_w_1_i_0_m_2_index_42 - thetaVar_w_2_i_0_m_2_index_57 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_1_m_0:
-   thetaVar_w_1_i_1_m_0_index_43 - thetaVar_w_2_i_1_m_0_index_58 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_1_m_1:
-   thetaVar_w_1_i_1_m_1_index_44 - thetaVar_w_2_i_1_m_1_index_59 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_1_m_2:
-   thetaVar_w_1_i_1_m_2_index_45 - thetaVar_w_2_i_1_m_2_index_60 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_2_m_0:
-   thetaVar_w_1_i_2_m_0_index_46 - thetaVar_w_2_i_2_m_0_index_61 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_2_m_1:
-   thetaVar_w_1_i_2_m_1_index_47 - thetaVar_w_2_i_2_m_1_index_62 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_2_m_2:
-   thetaVar_w_1_i_2_m_2_index_48 - thetaVar_w_2_i_2_m_2_index_63 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_3_m_0:
-   thetaVar_w_1_i_3_m_0_index_49 - thetaVar_w_2_i_3_m_0_index_64 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_3_m_1:
-   thetaVar_w_1_i_3_m_1_index_50 - thetaVar_w_2_i_3_m_1_index_65 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_3_m_2:
-   thetaVar_w_1_i_3_m_2_index_51 - thetaVar_w_2_i_3_m_2_index_66 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_4_m_0:
-   thetaVar_w_1_i_4_m_0_index_52 - thetaVar_w_2_i_4_m_0_index_67 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_4_m_1:
-   thetaVar_w_1_i_4_m_1_index_53 - thetaVar_w_2_i_4_m_1_index_68 = 0
- Nonanticipativity_thetaVar_w1_1_w2_2_i_4_m_2:
-   thetaVar_w_1_i_4_m_2_index_54 - thetaVar_w_2_i_4_m_2_index_69 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_0_m_0:
-   thetaVar_w_2_i_0_m_0_index_55 - thetaVar_w_3_i_0_m_0_index_70 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_0_m_1:
-   thetaVar_w_2_i_0_m_1_index_56 - thetaVar_w_3_i_0_m_1_index_71 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_0_m_2:
-   thetaVar_w_2_i_0_m_2_index_57 - thetaVar_w_3_i_0_m_2_index_72 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_1_m_0:
-   thetaVar_w_2_i_1_m_0_index_58 - thetaVar_w_3_i_1_m_0_index_73 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_1_m_1:
-   thetaVar_w_2_i_1_m_1_index_59 - thetaVar_w_3_i_1_m_1_index_74 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_1_m_2:
-   thetaVar_w_2_i_1_m_2_index_60 - thetaVar_w_3_i_1_m_2_index_75 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_2_m_0:
-   thetaVar_w_2_i_2_m_0_index_61 - thetaVar_w_3_i_2_m_0_index_76 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_2_m_1:
-   thetaVar_w_2_i_2_m_1_index_62 - thetaVar_w_3_i_2_m_1_index_77 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_2_m_2:
-   thetaVar_w_2_i_2_m_2_index_63 - thetaVar_w_3_i_2_m_2_index_78 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_3_m_0:
-   thetaVar_w_2_i_3_m_0_index_64 - thetaVar_w_3_i_3_m_0_index_79 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_3_m_1:
-   thetaVar_w_2_i_3_m_1_index_65 - thetaVar_w_3_i_3_m_1_index_80 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_3_m_2:
-   thetaVar_w_2_i_3_m_2_index_66 - thetaVar_w_3_i_3_m_2_index_81 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_4_m_0:
-   thetaVar_w_2_i_4_m_0_index_67 - thetaVar_w_3_i_4_m_0_index_82 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_4_m_1:
-   thetaVar_w_2_i_4_m_1_index_68 - thetaVar_w_3_i_4_m_1_index_83 = 0
- Nonanticipativity_thetaVar_w1_2_w2_3_i_4_m_2:
-   thetaVar_w_2_i_4_m_2_index_69 - thetaVar_w_3_i_4_m_2_index_84 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_0_m_0:
-   thetaVar_w_3_i_0_m_0_index_70 - thetaVar_w_4_i_0_m_0_index_85 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_0_m_1:
-   thetaVar_w_3_i_0_m_1_index_71 - thetaVar_w_4_i_0_m_1_index_86 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_0_m_2:
-   thetaVar_w_3_i_0_m_2_index_72 - thetaVar_w_4_i_0_m_2_index_87 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_1_m_0:
-   thetaVar_w_3_i_1_m_0_index_73 - thetaVar_w_4_i_1_m_0_index_88 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_1_m_1:
-   thetaVar_w_3_i_1_m_1_index_74 - thetaVar_w_4_i_1_m_1_index_89 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_1_m_2:
-   thetaVar_w_3_i_1_m_2_index_75 - thetaVar_w_4_i_1_m_2_index_90 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_2_m_0:
-   thetaVar_w_3_i_2_m_0_index_76 - thetaVar_w_4_i_2_m_0_index_91 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_2_m_1:
-   thetaVar_w_3_i_2_m_1_index_77 - thetaVar_w_4_i_2_m_1_index_92 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_2_m_2:
-   thetaVar_w_3_i_2_m_2_index_78 - thetaVar_w_4_i_2_m_2_index_93 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_3_m_0:
-   thetaVar_w_3_i_3_m_0_index_79 - thetaVar_w_4_i_3_m_0_index_94 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_3_m_1:
-   thetaVar_w_3_i_3_m_1_index_80 - thetaVar_w_4_i_3_m_1_index_95 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_3_m_2:
-   thetaVar_w_3_i_3_m_2_index_81 - thetaVar_w_4_i_3_m_2_index_96 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_4_m_0:
-   thetaVar_w_3_i_4_m_0_index_82 - thetaVar_w_4_i_4_m_0_index_97 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_4_m_1:
-   thetaVar_w_3_i_4_m_1_index_83 - thetaVar_w_4_i_4_m_1_index_98 = 0
- Nonanticipativity_thetaVar_w1_3_w2_4_i_4_m_2:
-   thetaVar_w_3_i_4_m_2_index_84 - thetaVar_w_4_i_4_m_2_index_99 = 0
- Nonanticipativity_W_w1_0_w2_1_h_0_h'_0: W_w_0_h_0_h'_0_index_100
-   - W_w_1_h_0_h'_0_index_109 = 0
- Nonanticipativity_W_w1_0_w2_1_h_0_h'_1: W_w_0_h_0_h'_1_index_103
-   - W_w_1_h_0_h'_1_index_112 = 0
- Nonanticipativity_W_w1_0_w2_1_h_0_h'_2: W_w_0_h_0_h'_2_index_106
-   - W_w_1_h_0_h'_2_index_115 = 0
- Nonanticipativity_W_w1_0_w2_1_h_1_h'_0: W_w_0_h_1_h'_0_index_101
-   - W_w_1_h_1_h'_0_index_110 = 0
- Nonanticipativity_W_w1_0_w2_1_h_1_h'_1: W_w_0_h_1_h'_1_index_104
-   - W_w_1_h_1_h'_1_index_113 = 0
- Nonanticipativity_W_w1_0_w2_1_h_1_h'_2: W_w_0_h_1_h'_2_index_107
-   - W_w_1_h_1_h'_2_index_116 = 0
- Nonanticipativity_W_w1_0_w2_1_h_2_h'_0: W_w_0_h_2_h'_0_index_102
-   - W_w_1_h_2_h'_0_index_111 = 0
- Nonanticipativity_W_w1_0_w2_1_h_2_h'_1: W_w_0_h_2_h'_1_index_105
-   - W_w_1_h_2_h'_1_index_114 = 0
- Nonanticipativity_W_w1_0_w2_1_h_2_h'_2: W_w_0_h_2_h'_2_index_108
-   - W_w_1_h_2_h'_2_index_117 = 0
- Nonanticipativity_W_w1_1_w2_2_h_0_h'_0: W_w_1_h_0_h'_0_index_109
-   - W_w_2_h_0_h'_0_index_118 = 0
- Nonanticipativity_W_w1_1_w2_2_h_0_h'_1: W_w_1_h_0_h'_1_index_112
-   - W_w_2_h_0_h'_1_index_121 = 0
- Nonanticipativity_W_w1_1_w2_2_h_0_h'_2: W_w_1_h_0_h'_2_index_115
-   - W_w_2_h_0_h'_2_index_124 = 0
- Nonanticipativity_W_w1_1_w2_2_h_1_h'_0: W_w_1_h_1_h'_0_index_110
-   - W_w_2_h_1_h'_0_index_119 = 0
- Nonanticipativity_W_w1_1_w2_2_h_1_h'_1: W_w_1_h_1_h'_1_index_113
-   - W_w_2_h_1_h'_1_index_122 = 0
- Nonanticipativity_W_w1_1_w2_2_h_1_h'_2: W_w_1_h_1_h'_2_index_116
-   - W_w_2_h_1_h'_2_index_125 = 0
- Nonanticipativity_W_w1_1_w2_2_h_2_h'_0: W_w_1_h_2_h'_0_index_111
-   - W_w_2_h_2_h'_0_index_120 = 0
- Nonanticipativity_W_w1_1_w2_2_h_2_h'_1: W_w_1_h_2_h'_1_index_114
-   - W_w_2_h_2_h'_1_index_123 = 0
- Nonanticipativity_W_w1_1_w2_2_h_2_h'_2: W_w_1_h_2_h'_2_index_117
-   - W_w_2_h_2_h'_2_index_126 = 0
- Nonanticipativity_W_w1_2_w2_3_h_0_h'_0: W_w_2_h_0_h'_0_index_118
-   - W_w_3_h_0_h'_0_index_127 = 0
- Nonanticipativity_W_w1_2_w2_3_h_0_h'_1: W_w_2_h_0_h'_1_index_121
-   - W_w_3_h_0_h'_1_index_130 = 0
- Nonanticipativity_W_w1_2_w2_3_h_0_h'_2: W_w_2_h_0_h'_2_index_124
-   - W_w_3_h_0_h'_2_index_133 = 0
- Nonanticipativity_W_w1_2_w2_3_h_1_h'_0: W_w_2_h_1_h'_0_index_119
-   - W_w_3_h_1_h'_0_index_128 = 0
- Nonanticipativity_W_w1_2_w2_3_h_1_h'_1: W_w_2_h_1_h'_1_index_122
-   - W_w_3_h_1_h'_1_index_131 = 0
- Nonanticipativity_W_w1_2_w2_3_h_1_h'_2: W_w_2_h_1_h'_2_index_125
-   - W_w_3_h_1_h'_2_index_134 = 0
- Nonanticipativity_W_w1_2_w2_3_h_2_h'_0: W_w_2_h_2_h'_0_index_120
-   - W_w_3_h_2_h'_0_index_129 = 0
- Nonanticipativity_W_w1_2_w2_3_h_2_h'_1: W_w_2_h_2_h'_1_index_123
-   - W_w_3_h_2_h'_1_index_132 = 0
- Nonanticipativity_W_w1_2_w2_3_h_2_h'_2: W_w_2_h_2_h'_2_index_126
-   - W_w_3_h_2_h'_2_index_135 = 0
- Nonanticipativity_W_w1_3_w2_4_h_0_h'_0: W_w_3_h_0_h'_0_index_127
-   - W_w_4_h_0_h'_0_index_136 = 0
- Nonanticipativity_W_w1_3_w2_4_h_0_h'_1: W_w_3_h_0_h'_1_index_130
-   - W_w_4_h_0_h'_1_index_139 = 0
- Nonanticipativity_W_w1_3_w2_4_h_0_h'_2: W_w_3_h_0_h'_2_index_133
-   - W_w_4_h_0_h'_2_index_142 = 0
- Nonanticipativity_W_w1_3_w2_4_h_1_h'_0: W_w_3_h_1_h'_0_index_128
-   - W_w_4_h_1_h'_0_index_137 = 0
- Nonanticipativity_W_w1_3_w2_4_h_1_h'_1: W_w_3_h_1_h'_1_index_131
-   - W_w_4_h_1_h'_1_index_140 = 0
- Nonanticipativity_W_w1_3_w2_4_h_1_h'_2: W_w_3_h_1_h'_2_index_134
-   - W_w_4_h_1_h'_2_index_143 = 0
- Nonanticipativity_W_w1_3_w2_4_h_2_h'_0: W_w_3_h_2_h'_0_index_129
-   - W_w_4_h_2_h'_0_index_138 = 0
- Nonanticipativity_W_w1_3_w2_4_h_2_h'_1: W_w_3_h_2_h'_1_index_132
-   - W_w_4_h_2_h'_1_index_141 = 0
- Nonanticipativity_W_w1_3_w2_4_h_2_h'_2: W_w_3_h_2_h'_2_index_135
-   - W_w_4_h_2_h'_2_index_144 = 0
+ CopyGivenNrLandRescueVehicle_w_1_i_2_m_2: thetaVar_w_1_i_2_m_2_index_48
+   = 18
+ CopyGivenNrLandRescueVehicle_w_1_i_3_m_0: thetaVar_w_1_i_3_m_0_index_49
+   = 0
+ CopyGivenNrLandRescueVehicle_w_1_i_3_m_1: thetaVar_w_1_i_3_m_1_index_50
+   = 0
+ CopyGivenNrLandRescueVehicle_w_1_i_3_m_2: thetaVar_w_1_i_3_m_2_index_51
+   = 0
+ CopyGivenNrLandRescueVehicle_w_1_i_4_m_0: thetaVar_w_1_i_4_m_0_index_52
+   = 0
+ CopyGivenNrLandRescueVehicle_w_1_i_4_m_1: thetaVar_w_1_i_4_m_1_index_53
+   = 0
+ CopyGivenNrLandRescueVehicle_w_1_i_4_m_2: thetaVar_w_1_i_4_m_2_index_54
+   = 0
+ CopyGivenNrLandRescueVehicle_w_2_i_0_m_0: thetaVar_w_2_i_0_m_0_index_55
+   = 0
+ CopyGivenNrLandRescueVehicle_w_2_i_0_m_1: thetaVar_w_2_i_0_m_1_index_56
+   = 0
+ CopyGivenNrLandRescueVehicle_w_2_i_0_m_2: thetaVar_w_2_i_0_m_2_index_57
+   = 0
+ CopyGivenNrLandRescueVehicle_w_2_i_1_m_0: thetaVar_w_2_i_1_m_0_index_58
+   = 0
+ CopyGivenNrLandRescueVehicle_w_2_i_1_m_1: thetaVar_w_2_i_1_m_1_index_59
+   = 0
+ CopyGivenNrLandRescueVehicle_w_2_i_1_m_2: thetaVar_w_2_i_1_m_2_index_60
+   = 2
+ CopyGivenNrLandRescueVehicle_w_2_i_2_m_0: thetaVar_w_2_i_2_m_0_index_61
+   = 0
+ CopyGivenNrLandRescueVehicle_w_2_i_2_m_1: thetaVar_w_2_i_2_m_1_index_62
+   = 0
+ CopyGivenNrLandRescueVehicle_w_2_i_2_m_2: thetaVar_w_2_i_2_m_2_index_63
+   = 18
+ CopyGivenNrLandRescueVehicle_w_2_i_3_m_0: thetaVar_w_2_i_3_m_0_index_64
+   = 0
+ CopyGivenNrLandRescueVehicle_w_2_i_3_m_1: thetaVar_w_2_i_3_m_1_index_65
+   = 0
+ CopyGivenNrLandRescueVehicle_w_2_i_3_m_2: thetaVar_w_2_i_3_m_2_index_66
+   = 0
+ CopyGivenNrLandRescueVehicle_w_2_i_4_m_0: thetaVar_w_2_i_4_m_0_index_67
+   = 0
+ CopyGivenNrLandRescueVehicle_w_2_i_4_m_1: thetaVar_w_2_i_4_m_1_index_68
+   = 0
+ CopyGivenNrLandRescueVehicle_w_2_i_4_m_2: thetaVar_w_2_i_4_m_2_index_69
+   = 0
+ CopyGivenNrLandRescueVehicle_w_3_i_0_m_0: thetaVar_w_3_i_0_m_0_index_70
+   = 0
+ CopyGivenNrLandRescueVehicle_w_3_i_0_m_1: thetaVar_w_3_i_0_m_1_index_71
+   = 0
+ CopyGivenNrLandRescueVehicle_w_3_i_0_m_2: thetaVar_w_3_i_0_m_2_index_72
+   = 0
+ CopyGivenNrLandRescueVehicle_w_3_i_1_m_0: thetaVar_w_3_i_1_m_0_index_73
+   = 0
+ CopyGivenNrLandRescueVehicle_w_3_i_1_m_1: thetaVar_w_3_i_1_m_1_index_74
+   = 0
+ CopyGivenNrLandRescueVehicle_w_3_i_1_m_2: thetaVar_w_3_i_1_m_2_index_75
+   = 2
+ CopyGivenNrLandRescueVehicle_w_3_i_2_m_0: thetaVar_w_3_i_2_m_0_index_76
+   = 0
+ CopyGivenNrLandRescueVehicle_w_3_i_2_m_1: thetaVar_w_3_i_2_m_1_index_77
+   = 0
+ CopyGivenNrLandRescueVehicle_w_3_i_2_m_2: thetaVar_w_3_i_2_m_2_index_78
+   = 18
+ CopyGivenNrLandRescueVehicle_w_3_i_3_m_0: thetaVar_w_3_i_3_m_0_index_79
+   = 0
+ CopyGivenNrLandRescueVehicle_w_3_i_3_m_1: thetaVar_w_3_i_3_m_1_index_80
+   = 0
+ CopyGivenNrLandRescueVehicle_w_3_i_3_m_2: thetaVar_w_3_i_3_m_2_index_81
+   = 0
+ CopyGivenNrLandRescueVehicle_w_3_i_4_m_0: thetaVar_w_3_i_4_m_0_index_82
+   = 0
+ CopyGivenNrLandRescueVehicle_w_3_i_4_m_1: thetaVar_w_3_i_4_m_1_index_83
+   = 0
+ CopyGivenNrLandRescueVehicle_w_3_i_4_m_2: thetaVar_w_3_i_4_m_2_index_84
+   = 0
+ CopyGivenNrLandRescueVehicle_w_4_i_0_m_0: thetaVar_w_4_i_0_m_0_index_85
+   = 0
+ CopyGivenNrLandRescueVehicle_w_4_i_0_m_1: thetaVar_w_4_i_0_m_1_index_86
+   = 0
+ CopyGivenNrLandRescueVehicle_w_4_i_0_m_2: thetaVar_w_4_i_0_m_2_index_87
+   = 0
+ CopyGivenNrLandRescueVehicle_w_4_i_1_m_0: thetaVar_w_4_i_1_m_0_index_88
+   = 0
+ CopyGivenNrLandRescueVehicle_w_4_i_1_m_1: thetaVar_w_4_i_1_m_1_index_89
+   = 0
+ CopyGivenNrLandRescueVehicle_w_4_i_1_m_2: thetaVar_w_4_i_1_m_2_index_90
+   = 2
+ CopyGivenNrLandRescueVehicle_w_4_i_2_m_0: thetaVar_w_4_i_2_m_0_index_91
+   = 0
+ CopyGivenNrLandRescueVehicle_w_4_i_2_m_1: thetaVar_w_4_i_2_m_1_index_92
+   = 0
+ CopyGivenNrLandRescueVehicle_w_4_i_2_m_2: thetaVar_w_4_i_2_m_2_index_93
+   = 18
+ CopyGivenNrLandRescueVehicle_w_4_i_3_m_0: thetaVar_w_4_i_3_m_0_index_94
+   = 0
+ CopyGivenNrLandRescueVehicle_w_4_i_3_m_1: thetaVar_w_4_i_3_m_1_index_95
+   = 0
+ CopyGivenNrLandRescueVehicle_w_4_i_3_m_2: thetaVar_w_4_i_3_m_2_index_96
+   = 0
+ CopyGivenNrLandRescueVehicle_w_4_i_4_m_0: thetaVar_w_4_i_4_m_0_index_97
+   = 0
+ CopyGivenNrLandRescueVehicle_w_4_i_4_m_1: thetaVar_w_4_i_4_m_1_index_98
+   = 0
+ CopyGivenNrLandRescueVehicle_w_4_i_4_m_2: thetaVar_w_4_i_4_m_2_index_99
+   = 0
+ CopyGivenBackupHospital_w_0_h_0_h'_0: W_w_0_h_0_h'_0_index_100 = 0
+ CopyGivenBackupHospital_w_0_h_0_h'_1: W_w_0_h_0_h'_1_index_103 = 0
+ CopyGivenBackupHospital_w_0_h_0_h'_2: W_w_0_h_0_h'_2_index_106 = 0
+ CopyGivenBackupHospital_w_0_h_1_h'_0: W_w_0_h_1_h'_0_index_101 = 0
+ CopyGivenBackupHospital_w_0_h_1_h'_1: W_w_0_h_1_h'_1_index_104 = 0
+ CopyGivenBackupHospital_w_0_h_1_h'_2: W_w_0_h_1_h'_2_index_107 = 0
+ CopyGivenBackupHospital_w_0_h_2_h'_0: W_w_0_h_2_h'_0_index_102 = 0
+ CopyGivenBackupHospital_w_0_h_2_h'_1: W_w_0_h_2_h'_1_index_105 = 0
+ CopyGivenBackupHospital_w_0_h_2_h'_2: W_w_0_h_2_h'_2_index_108 = 0
+ CopyGivenBackupHospital_w_1_h_0_h'_0: W_w_1_h_0_h'_0_index_109 = 0
+ CopyGivenBackupHospital_w_1_h_0_h'_1: W_w_1_h_0_h'_1_index_112 = 0
+ CopyGivenBackupHospital_w_1_h_0_h'_2: W_w_1_h_0_h'_2_index_115 = 0
+ CopyGivenBackupHospital_w_1_h_1_h'_0: W_w_1_h_1_h'_0_index_110 = 0
+ CopyGivenBackupHospital_w_1_h_1_h'_1: W_w_1_h_1_h'_1_index_113 = 0
+ CopyGivenBackupHospital_w_1_h_1_h'_2: W_w_1_h_1_h'_2_index_116 = 0
+ CopyGivenBackupHospital_w_1_h_2_h'_0: W_w_1_h_2_h'_0_index_111 = 0
+ CopyGivenBackupHospital_w_1_h_2_h'_1: W_w_1_h_2_h'_1_index_114 = 0
+ CopyGivenBackupHospital_w_1_h_2_h'_2: W_w_1_h_2_h'_2_index_117 = 0
+ CopyGivenBackupHospital_w_2_h_0_h'_0: W_w_2_h_0_h'_0_index_118 = 0
+ CopyGivenBackupHospital_w_2_h_0_h'_1: W_w_2_h_0_h'_1_index_121 = 0
+ CopyGivenBackupHospital_w_2_h_0_h'_2: W_w_2_h_0_h'_2_index_124 = 0
+ CopyGivenBackupHospital_w_2_h_1_h'_0: W_w_2_h_1_h'_0_index_119 = 0
+ CopyGivenBackupHospital_w_2_h_1_h'_1: W_w_2_h_1_h'_1_index_122 = 0
+ CopyGivenBackupHospital_w_2_h_1_h'_2: W_w_2_h_1_h'_2_index_125 = 0
+ CopyGivenBackupHospital_w_2_h_2_h'_0: W_w_2_h_2_h'_0_index_120 = 0
+ CopyGivenBackupHospital_w_2_h_2_h'_1: W_w_2_h_2_h'_1_index_123 = 0
+ CopyGivenBackupHospital_w_2_h_2_h'_2: W_w_2_h_2_h'_2_index_126 = 0
+ CopyGivenBackupHospital_w_3_h_0_h'_0: W_w_3_h_0_h'_0_index_127 = 0
+ CopyGivenBackupHospital_w_3_h_0_h'_1: W_w_3_h_0_h'_1_index_130 = 0
+ CopyGivenBackupHospital_w_3_h_0_h'_2: W_w_3_h_0_h'_2_index_133 = 0
+ CopyGivenBackupHospital_w_3_h_1_h'_0: W_w_3_h_1_h'_0_index_128 = 0
+ CopyGivenBackupHospital_w_3_h_1_h'_1: W_w_3_h_1_h'_1_index_131 = 0
+ CopyGivenBackupHospital_w_3_h_1_h'_2: W_w_3_h_1_h'_2_index_134 = 0
+ CopyGivenBackupHospital_w_3_h_2_h'_0: W_w_3_h_2_h'_0_index_129 = 0
+ CopyGivenBackupHospital_w_3_h_2_h'_1: W_w_3_h_2_h'_1_index_132 = 0
+ CopyGivenBackupHospital_w_3_h_2_h'_2: W_w_3_h_2_h'_2_index_135 = 0
+ CopyGivenBackupHospital_w_4_h_0_h'_0: W_w_4_h_0_h'_0_index_136 = 0
+ CopyGivenBackupHospital_w_4_h_0_h'_1: W_w_4_h_0_h'_1_index_139 = 0
+ CopyGivenBackupHospital_w_4_h_0_h'_2: W_w_4_h_0_h'_2_index_142 = 0
+ CopyGivenBackupHospital_w_4_h_1_h'_0: W_w_4_h_1_h'_0_index_137 = 0
+ CopyGivenBackupHospital_w_4_h_1_h'_1: W_w_4_h_1_h'_1_index_140 = 0
+ CopyGivenBackupHospital_w_4_h_1_h'_2: W_w_4_h_1_h'_2_index_143 = 0
+ CopyGivenBackupHospital_w_4_h_2_h'_0: W_w_4_h_2_h'_0_index_138 = 0
+ CopyGivenBackupHospital_w_4_h_2_h'_1: W_w_4_h_2_h'_1_index_141 = 0
+ CopyGivenBackupHospital_w_4_h_2_h'_2: W_w_4_h_2_h'_2_index_144 = 0
 Bounds
- x_w_0_i_0_index_0 = 0
- x_w_0_i_1_index_1 = 0
- x_w_0_i_2_index_2 = 1
- x_w_0_i_3_index_3 = 1
- x_w_0_i_4_index_4 = 1
- x_w_1_i_0_index_5 = 0
- x_w_1_i_1_index_6 = 0
- x_w_1_i_2_index_7 = 1
- x_w_1_i_3_index_8 = 1
- x_w_1_i_4_index_9 = 1
- x_w_2_i_0_index_10 = 0
- x_w_2_i_1_index_11 = 0
- x_w_2_i_2_index_12 = 1
- x_w_2_i_3_index_13 = 1
- x_w_2_i_4_index_14 = 1
- x_w_3_i_0_index_15 = 0
- x_w_3_i_1_index_16 = 0
- x_w_3_i_2_index_17 = 1
- x_w_3_i_3_index_18 = 1
- x_w_3_i_4_index_19 = 1
- x_w_4_i_0_index_20 = 0
- x_w_4_i_1_index_21 = 0
- x_w_4_i_2_index_22 = 1
- x_w_4_i_3_index_23 = 1
- x_w_4_i_4_index_24 = 1
- thetaVar_w_0_i_0_m_0_index_25 = 0
- thetaVar_w_0_i_0_m_1_index_26 = 0
- thetaVar_w_0_i_0_m_2_index_27 = 0
- thetaVar_w_0_i_1_m_0_index_28 = 0
- thetaVar_w_0_i_1_m_1_index_29 = 0
- thetaVar_w_0_i_1_m_2_index_30 = 0
- thetaVar_w_0_i_2_m_0_index_31 = 5
- thetaVar_w_0_i_2_m_1_index_32 = 10
- thetaVar_w_0_i_2_m_2_index_33 = 16
- thetaVar_w_0_i_3_m_0_index_34 = 20
- thetaVar_w_0_i_3_m_1_index_35 = 16
- thetaVar_w_0_i_3_m_2_index_36 = 13
- thetaVar_w_0_i_4_m_0_index_37 = 11
- thetaVar_w_0_i_4_m_1_index_38 = 3
- thetaVar_w_0_i_4_m_2_index_39 = 3
- thetaVar_w_1_i_0_m_0_index_40 = 0
- thetaVar_w_1_i_0_m_1_index_41 = 0
- thetaVar_w_1_i_0_m_2_index_42 = 0
- thetaVar_w_1_i_1_m_0_index_43 = 0
- thetaVar_w_1_i_1_m_1_index_44 = 0
- thetaVar_w_1_i_1_m_2_index_45 = 0
- thetaVar_w_1_i_2_m_0_index_46 = 5
- thetaVar_w_1_i_2_m_1_index_47 = 10
- thetaVar_w_1_i_2_m_2_index_48 = 16
- thetaVar_w_1_i_3_m_0_index_49 = 20
- thetaVar_w_1_i_3_m_1_index_50 = 16
- thetaVar_w_1_i_3_m_2_index_51 = 13
- thetaVar_w_1_i_4_m_0_index_52 = 11
- thetaVar_w_1_i_4_m_1_index_53 = 3
- thetaVar_w_1_i_4_m_2_index_54 = 3
- thetaVar_w_2_i_0_m_0_index_55 = 0
- thetaVar_w_2_i_0_m_1_index_56 = 0
- thetaVar_w_2_i_0_m_2_index_57 = 0
- thetaVar_w_2_i_1_m_0_index_58 = 0
- thetaVar_w_2_i_1_m_1_index_59 = 0
- thetaVar_w_2_i_1_m_2_index_60 = 0
- thetaVar_w_2_i_2_m_0_index_61 = 5
- thetaVar_w_2_i_2_m_1_index_62 = 10
- thetaVar_w_2_i_2_m_2_index_63 = 16
- thetaVar_w_2_i_3_m_0_index_64 = 20
- thetaVar_w_2_i_3_m_1_index_65 = 16
- thetaVar_w_2_i_3_m_2_index_66 = 13
- thetaVar_w_2_i_4_m_0_index_67 = 11
- thetaVar_w_2_i_4_m_1_index_68 = 3
- thetaVar_w_2_i_4_m_2_index_69 = 3
- thetaVar_w_3_i_0_m_0_index_70 = 0
- thetaVar_w_3_i_0_m_1_index_71 = 0
- thetaVar_w_3_i_0_m_2_index_72 = 0
- thetaVar_w_3_i_1_m_0_index_73 = 0
- thetaVar_w_3_i_1_m_1_index_74 = 0
- thetaVar_w_3_i_1_m_2_index_75 = 0
- thetaVar_w_3_i_2_m_0_index_76 = 5
- thetaVar_w_3_i_2_m_1_index_77 = 10
- thetaVar_w_3_i_2_m_2_index_78 = 16
- thetaVar_w_3_i_3_m_0_index_79 = 20
- thetaVar_w_3_i_3_m_1_index_80 = 16
- thetaVar_w_3_i_3_m_2_index_81 = 13
- thetaVar_w_3_i_4_m_0_index_82 = 11
- thetaVar_w_3_i_4_m_1_index_83 = 3
- thetaVar_w_3_i_4_m_2_index_84 = 3
- thetaVar_w_4_i_0_m_0_index_85 = 0
- thetaVar_w_4_i_0_m_1_index_86 = 0
- thetaVar_w_4_i_0_m_2_index_87 = 0
- thetaVar_w_4_i_1_m_0_index_88 = 0
- thetaVar_w_4_i_1_m_1_index_89 = 0
- thetaVar_w_4_i_1_m_2_index_90 = 0
- thetaVar_w_4_i_2_m_0_index_91 = 5
- thetaVar_w_4_i_2_m_1_index_92 = 10
- thetaVar_w_4_i_2_m_2_index_93 = 16
- thetaVar_w_4_i_3_m_0_index_94 = 20
- thetaVar_w_4_i_3_m_1_index_95 = 16
- thetaVar_w_4_i_3_m_2_index_96 = 13
- thetaVar_w_4_i_4_m_0_index_97 = 11
- thetaVar_w_4_i_4_m_1_index_98 = 3
- thetaVar_w_4_i_4_m_2_index_99 = 3
- W_w_0_h_0_h'_0_index_100 = 0
- W_w_0_h_0_h'_1_index_103 = 0
- W_w_0_h_0_h'_2_index_106 = 0
- W_w_0_h_1_h'_0_index_101 = 1
- W_w_0_h_1_h'_1_index_104 = 0
- W_w_0_h_1_h'_2_index_107 = 0
- W_w_0_h_2_h'_0_index_102 = 1
- W_w_0_h_2_h'_1_index_105 = 0
- W_w_0_h_2_h'_2_index_108 = 0
- W_w_1_h_0_h'_0_index_109 = 0
- W_w_1_h_0_h'_1_index_112 = 0
- W_w_1_h_0_h'_2_index_115 = 0
- W_w_1_h_1_h'_0_index_110 = 1
- W_w_1_h_1_h'_1_index_113 = 0
- W_w_1_h_1_h'_2_index_116 = 0
- W_w_1_h_2_h'_0_index_111 = 1
- W_w_1_h_2_h'_1_index_114 = 0
- W_w_1_h_2_h'_2_index_117 = 0
- W_w_2_h_0_h'_0_index_118 = 0
- W_w_2_h_0_h'_1_index_121 = 0
- W_w_2_h_0_h'_2_index_124 = 0
- W_w_2_h_1_h'_0_index_119 = 1
- W_w_2_h_1_h'_1_index_122 = 0
- W_w_2_h_1_h'_2_index_125 = 0
- W_w_2_h_2_h'_0_index_120 = 1
- W_w_2_h_2_h'_1_index_123 = 0
- W_w_2_h_2_h'_2_index_126 = 0
- W_w_3_h_0_h'_0_index_127 = 0
- W_w_3_h_0_h'_1_index_130 = 0
- W_w_3_h_0_h'_2_index_133 = 0
- W_w_3_h_1_h'_0_index_128 = 1
- W_w_3_h_1_h'_1_index_131 = 0
- W_w_3_h_1_h'_2_index_134 = 0
- W_w_3_h_2_h'_0_index_129 = 1
- W_w_3_h_2_h'_1_index_132 = 0
- W_w_3_h_2_h'_2_index_135 = 0
- W_w_4_h_0_h'_0_index_136 = 0
- W_w_4_h_0_h'_1_index_139 = 0
- W_w_4_h_0_h'_2_index_142 = 0
- W_w_4_h_1_h'_0_index_137 = 1
- W_w_4_h_1_h'_1_index_140 = 0
- W_w_4_h_1_h'_2_index_143 = 0
- W_w_4_h_2_h'_0_index_138 = 1
- W_w_4_h_2_h'_1_index_141 = 0
- W_w_4_h_2_h'_2_index_144 = 0
+ x_w_0_i_0_index_0 <= 1
+ x_w_0_i_1_index_1 <= 1
+ x_w_0_i_2_index_2 <= 1
+ x_w_0_i_3_index_3 <= 1
+ x_w_0_i_4_index_4 <= 1
+ x_w_1_i_0_index_5 <= 1
+ x_w_1_i_1_index_6 <= 1
+ x_w_1_i_2_index_7 <= 1
+ x_w_1_i_3_index_8 <= 1
+ x_w_1_i_4_index_9 <= 1
+ x_w_2_i_0_index_10 <= 1
+ x_w_2_i_1_index_11 <= 1
+ x_w_2_i_2_index_12 <= 1
+ x_w_2_i_3_index_13 <= 1
+ x_w_2_i_4_index_14 <= 1
+ x_w_3_i_0_index_15 <= 1
+ x_w_3_i_1_index_16 <= 1
+ x_w_3_i_2_index_17 <= 1
+ x_w_3_i_3_index_18 <= 1
+ x_w_3_i_4_index_19 <= 1
+ x_w_4_i_0_index_20 <= 1
+ x_w_4_i_1_index_21 <= 1
+ x_w_4_i_2_index_22 <= 1
+ x_w_4_i_3_index_23 <= 1
+ x_w_4_i_4_index_24 <= 1
+ W_w_0_h_0_h'_0_index_100 <= 1
+ W_w_0_h_0_h'_1_index_103 <= 1
+ W_w_0_h_0_h'_2_index_106 <= 1
+ W_w_0_h_1_h'_0_index_101 <= 1
+ W_w_0_h_1_h'_1_index_104 <= 1
+ W_w_0_h_1_h'_2_index_107 <= 1
+ W_w_0_h_2_h'_0_index_102 <= 1
+ W_w_0_h_2_h'_1_index_105 <= 1
+ W_w_0_h_2_h'_2_index_108 <= 1
+ W_w_1_h_0_h'_0_index_109 <= 1
+ W_w_1_h_0_h'_1_index_112 <= 1
+ W_w_1_h_0_h'_2_index_115 <= 1
+ W_w_1_h_1_h'_0_index_110 <= 1
+ W_w_1_h_1_h'_1_index_113 <= 1
+ W_w_1_h_1_h'_2_index_116 <= 1
+ W_w_1_h_2_h'_0_index_111 <= 1
+ W_w_1_h_2_h'_1_index_114 <= 1
+ W_w_1_h_2_h'_2_index_117 <= 1
+ W_w_2_h_0_h'_0_index_118 <= 1
+ W_w_2_h_0_h'_1_index_121 <= 1
+ W_w_2_h_0_h'_2_index_124 <= 1
+ W_w_2_h_1_h'_0_index_119 <= 1
+ W_w_2_h_1_h'_1_index_122 <= 1
+ W_w_2_h_1_h'_2_index_125 <= 1
+ W_w_2_h_2_h'_0_index_120 <= 1
+ W_w_2_h_2_h'_1_index_123 <= 1
+ W_w_2_h_2_h'_2_index_126 <= 1
+ W_w_3_h_0_h'_0_index_127 <= 1
+ W_w_3_h_0_h'_1_index_130 <= 1
+ W_w_3_h_0_h'_2_index_133 <= 1
+ W_w_3_h_1_h'_0_index_128 <= 1
+ W_w_3_h_1_h'_1_index_131 <= 1
+ W_w_3_h_1_h'_2_index_134 <= 1
+ W_w_3_h_2_h'_0_index_129 <= 1
+ W_w_3_h_2_h'_1_index_132 <= 1
+ W_w_3_h_2_h'_2_index_135 <= 1
+ W_w_4_h_0_h'_0_index_136 <= 1
+ W_w_4_h_0_h'_1_index_139 <= 1
+ W_w_4_h_0_h'_2_index_142 <= 1
+ W_w_4_h_1_h'_0_index_137 <= 1
+ W_w_4_h_1_h'_1_index_140 <= 1
+ W_w_4_h_1_h'_2_index_143 <= 1
+ W_w_4_h_2_h'_0_index_138 <= 1
+ W_w_4_h_2_h'_1_index_141 <= 1
+ W_w_4_h_2_h'_2_index_144 <= 1
 End

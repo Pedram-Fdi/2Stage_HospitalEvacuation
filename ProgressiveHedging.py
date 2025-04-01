@@ -13,6 +13,8 @@ import math
 import os
 import numpy as np
 from collections import deque
+import random
+
 
 # Define the directory path relative to the current script location
 directory = "./PH_Model_lp"
@@ -415,24 +417,52 @@ class ProgressiveHedging(object):
         return result
 
     def GetDualConvergenceIndice(self):
-        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GetDualConvergenceIndice")
+
         result = 0
 
         result = result + sum(self.ScenarioSet[w].Probability \
-                                * math.pow(self.CurrentSolution[self.BatchofScenario[w]].FacilityEstablishment_x_wi[self.NewIndexOfScenario[w]][i]
-                                - self.CurrentImplementableSolution.FacilityEstablishment_x_wi[w][i], 2)
-                                for i in self.Instance.FacilitySet
+                                * math.pow(self.CurrentSolution[self.BatchofScenario[w]].ACFEstablishment_x_wi[self.NewIndexOfScenario[w]][i]
+                                - self.CurrentImplementableSolution.ACFEstablishment_x_wi[w][i], 2)
+                                for i in self.Instance.ACFSet
                                 for w in self.ScenarioNrSet)
+
+        result = result + sum(self.ScenarioSet[w].Probability \
+                                * math.pow(self.CurrentSolution[self.BatchofScenario[w]].LandRescueVehicle_thetaVar_wim[self.NewIndexOfScenario[w]][i][m]
+                                - self.CurrentImplementableSolution.LandRescueVehicle_thetaVar_wim[w][i][m], 2)
+                                for m in self.Instance.RescueVehicleSet
+                                for i in self.Instance.ACFSet
+                                for w in self.ScenarioNrSet)
+
+        result = result + sum(self.ScenarioSet[w].Probability \
+                                * math.pow(self.CurrentSolution[self.BatchofScenario[w]].BackupHospital_W_whhPrime[self.NewIndexOfScenario[w]][h][hprime]
+                                - self.CurrentImplementableSolution.BackupHospital_W_whhPrime[w][h][hprime], 2)
+                                for hprime in self.Instance.HospitalSet
+                                for h in self.Instance.HospitalSet
+                                for w in self.ScenarioNrSet)
+                        
         return result
 
     def GetDistance(self, solution):
-        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GetDistance")
+
         result = 0
 
         result = result + sum(self.ScenarioSet[w].Probability \
-                            * math.pow(solution.FacilityEstablishment_x_wi[w][i], 2)
-                            for i in self.Instance.FacilitySet
+                            * math.pow(solution.ACFEstablishment_x_wi[w][i], 2)
+                            for i in self.Instance.ACFSet
                             for w in self.ScenarioNrSet)
+        
+        result = result + sum(self.ScenarioSet[w].Probability \
+                            * math.pow(solution.LandRescueVehicle_thetaVar_wim[w][i][m], 2)
+                            for m in self.Instance.RescueVehicleSet
+                            for i in self.Instance.ACFSet
+                            for w in self.ScenarioNrSet)
+
+        result = result + sum(self.ScenarioSet[w].Probability \
+                            * math.pow(solution.BackupHospital_W_whhPrime[w][h][hprime], 2)
+                            for hprime in self.Instance.HospitalSet
+                            for h in self.Instance.HospitalSet
+                            for w in self.ScenarioNrSet)
+                        
         return result
             
     def RateLargeChangeInImplementable(self):
@@ -603,7 +633,6 @@ class ProgressiveHedging(object):
 
         #For each scenario
         for m in range(self.NrMIPBatch):
-            print("$$$$$$$$$$$$$$$$$$------------ m: ", m)
             print("self.CurrentIteration: ", self.CurrentIteration)
 
             #Update the coeffient in the objective function
@@ -1045,16 +1074,38 @@ class ProgressiveHedging(object):
             #if Constants.Debug:
             #    self.PrintCurrentIteration()
 
-        self.GivenFacilityEstablishment_Applicable = [[round(value) for value in row] for row in self.CurrentImplementableSolution.FacilityEstablishment_x_wi]
+        GivenACFEstablishment_Applicable_wi = [[round(value) for value in row] for row in self.CurrentImplementableSolution.ACFEstablishment_x_wi]
+        GivenACFEstablishment_Applicable_i = self.Check_ACF_Establishment_Budget_Constraint(self.CurrentImplementableSolution.ACFEstablishment_x_wi[0], GivenACFEstablishment_Applicable_wi[0])
+        
+        GivenNrLandRescueVehicle_Applicable_wim = [[[round(value) for value in inner] for inner in outer] for outer in self.CurrentImplementableSolution.LandRescueVehicle_thetaVar_wim]
+        GivenNrLandRescueVehicle_Applicable_im = self.Check_LandRescueVehicleAllocation_Constraints(GivenACFEstablishment_Applicable_i, GivenNrLandRescueVehicle_Applicable_wim[0])
+
+        GivenBackupHospital_Applicable_whhprime = [[[round(value) for value in inner] for inner in outer] for outer in self.CurrentImplementableSolution.BackupHospital_W_whhPrime]
+        GivenBackupHospital_Applicable_hhprime = self.Check_Hospitals_Compatibility_Constraint(GivenBackupHospital_Applicable_whhprime[0])
+
+        # Now, replicate these scenario-0 values for all scenarios using one loop:
+        self.GivenACFEstablishment_Applicable = []
+        self.GivenNrLandRescueVehicle_Applicable = []
+        self.GivenBackupHospital_Applicable = []
+
+        for _ in self.ScenarioNrSet:
+            # For the 1D list, make a shallow copy
+            self.GivenACFEstablishment_Applicable.append(GivenACFEstablishment_Applicable_i[:])
+            # For the 2D lists, make a deep copy of each row
+            self.GivenNrLandRescueVehicle_Applicable.append([row[:] for row in GivenNrLandRescueVehicle_Applicable_im])
+            self.GivenBackupHospital_Applicable.append([row[:] for row in GivenBackupHospital_Applicable_hhprime])
+            
         self.Original_MIPSolver = MIPSolver(
                                         instance=self.Instance,
                                         model=Constants.Two_Stage,
                                         scenariotree=self.ScenarioTree,
                                         nrscenario=self.TreeStructure[1],
-                                        givenfacilitylocation=self.GivenFacilityEstablishment_Applicable,
+                                        givenACFEstablishment=self.GivenACFEstablishment_Applicable,
+                                        givenNrLandRescueVehicle=self.GivenNrLandRescueVehicle_Applicable,
+                                        givenBackupHospital=self.GivenBackupHospital_Applicable,
                                         evaluatesolution=True, # I set it as True, since, only when the evaluation mode is true, it sets the x values as their Given ones.
-                                        logfile="NO"
-                                    )
+                                        logfile="NO")
+        
         self.Original_MIPSolver.BuildModel()
         PHA_Final_solution = self.Original_MIPSolver.Solve(True)
 
@@ -1067,4 +1118,117 @@ class ProgressiveHedging(object):
         return self.CurrentImplementableSolution        
 
 
+    def Check_ACF_Establishment_Budget_Constraint(self, x_var_i, Rounded_x_var_row, RandomRemoval=False):
+        """
+        Check the budget constraint for ACF establishment. If the sum exceeds the budget, 
+        remove the ACFs with the lowest x_var value one by one until the budget is met.
+        If RandomRemoval is True, ACFs will be removed randomly instead of based on their capacity.
+        """
+        # Calculate the initial sum of fixed costs
+        total_cost = sum(self.Instance.Fixed_Cost_ACF_Constraint[i] * Rounded_x_var_row[i] for i in self.Instance.ACFSet)
+        
+        if total_cost <= self.Instance.Total_Budget_ACF_Establishment:
+            return Rounded_x_var_row  # If the constraint is satisfied, return the rounded solution as is.
+        
+        # If RandomRemoval is False, use the existing approach (remove based on smallest x_var values)
+        if not RandomRemoval:
+            # Filter out the elements of x_var where the value is zero
+            value_index_pairs = [(x_var_i[i], i) for i in self.Instance.ACFSet if x_var_i[i] > 0]
+            
+            # Sort by x_var value in ascending order (smallest values first)
+            value_index_pairs.sort()  # Sort based on x_var value
+            
+            # Iterate and remove the ACFs with the lowest x_var values one by one
+            for _, index in value_index_pairs:
+                # Set the corresponding Rounded_x_var element to 0
+                Rounded_x_var_row[index] = 0
+                total_cost = sum(self.Instance.Fixed_Cost_ACF_Constraint[i] * Rounded_x_var_row[i] for i in self.Instance.ACFSet)
+                
+                # If the budget is satisfied, stop removing
+                if total_cost <= self.Instance.Total_Budget_ACF_Establishment:
+                    break
+        
+        # If RandomRemoval is True, remove ACFs randomly until the budget is satisfied
+        else:
+            acf_indices = [i for i in self.Instance.ACFSet if x_var_i[i] > 0]  # Indices of ACFs that are established
+            random.shuffle(acf_indices)  # Shuffle the ACFs to remove them randomly
+            
+            for i in acf_indices:
+                # Set the corresponding Rounded_x_var element to 0
+                Rounded_x_var_row[i] = 0
+                total_cost = sum(self.Instance.Fixed_Cost_ACF_Constraint[i] * Rounded_x_var_row[i] for i in self.Instance.ACFSet)
+                
+                # If the budget is satisfied, stop removing
+                if total_cost <= self.Instance.Total_Budget_ACF_Establishment:
+                    break
+        
+        # After modifying, if we still don't meet the budget, return the modified rounded x solution
+        return Rounded_x_var_row   
+    
+    def check_connection_between_x_and_thetaVar(self, Rounded_ACFEstablishment_x_i, Rounded_thetaVar_im):
+        """
+        Ensure that if an ACF is not established (x[0][i] == 0), then no vehicles are assigned to it (thetaVar[0][m][i] == 0).
+        """
+        for i in self.Instance.ACFSet:
+            if Rounded_ACFEstablishment_x_i[i] == 0:  # If ACF i is not established
+                for m in self.Instance.RescueVehicleSet:  # For each rescue vehicle
+                    Rounded_thetaVar_im[i][m] = 0  # Set vehicles to 0 if the ACF is not established
 
+        return Rounded_thetaVar_im
+    
+    def check_limited_number_of_rescue_vehicles(self, Rounded_thetaVar_im):
+        """
+        Ensure that the number of vehicles assigned to each ACF does not exceed the available number of rescue vehicles.
+        If exceeded, reduce the assignments starting with ACFs with lower capacities (smallest first).
+        """
+        for m in self.Instance.RescueVehicleSet:
+            # Calculate the total number of vehicles assigned to ACF m in scenario 0
+            total_assigned = sum(Rounded_thetaVar_im[i][m] for i in self.Instance.ACFSet)
+            
+            if total_assigned > self.Instance.Number_Rescue_Vehicle_ACF[m]:
+                # If the total number of vehicles exceeds the available capacity, reduce the surplus
+                surplus = total_assigned - self.Instance.Number_Rescue_Vehicle_ACF[m]
+                
+                # Sort the ACFs by their capacity (from lowest to highest)
+                acf_with_capacity = [(self.Instance.ACF_Bed_Capacity[i], i) for i in self.Instance.ACFSet]
+                acf_with_capacity.sort(key=lambda x: x[0])  # Sort by capacity in ascending order (smallest first)
+                
+                # Continue reducing surplus by 1 vehicle at a time from each ACF, starting from the lowest capacity
+                while surplus > 0:  # Keep looping until the surplus is reduced to 0
+                    for _, i in acf_with_capacity:
+                        if surplus <= 0:
+                            break  # Stop if surplus is reduced to 0
+                        if Rounded_thetaVar_im[i][m] > 0:
+                            reduction = min(1, Rounded_thetaVar_im[i][m])  # Reduce by 1 at a time
+                            Rounded_thetaVar_im[i][m] -= reduction
+                            surplus -= reduction
+
+        return Rounded_thetaVar_im
+
+    def Check_LandRescueVehicleAllocation_Constraints(self, Rounded_ACFEstablishment_x_i, Rounded_thetaVar_im):
+        """
+        Check the constraints for the land rescue vehicle allocation:
+        1. Ensure that if an ACF is not established (x = 0), then no vehicles are assigned (thetaVar = 0).
+        2. Ensure that the total number of vehicles assigned to each ACF does not exceed the available vehicles.
+        """
+        # Step 1: Check the connection between x and thetaVar
+        Rounded_thetaVar_im = self.check_connection_between_x_and_thetaVar(Rounded_ACFEstablishment_x_i, Rounded_thetaVar_im)
+        
+        # Step 2: Check and adjust the total number of vehicles assigned to each ACF
+        Rounded_thetaVar_im = self.check_limited_number_of_rescue_vehicles(Rounded_thetaVar_im)
+        
+        return Rounded_thetaVar_im
+
+    def Check_Hospitals_Compatibility_Constraint(self, Rounded_w_hhprime):
+        """
+        Ensure that if w_[omega][h][h'] = 1, then hospital h' must be compatible with hospital h.
+        If not, set w_[omega][h][h'] to 0.
+        """
+        for h in self.Instance.HospitalSet:
+            for h_prime in self.Instance.HospitalSet:
+                if Rounded_w_hhprime[h][h_prime] == 1:
+                    # Check compatibility
+                    if h_prime not in self.Instance.K_h.get(h, set()):
+                        Rounded_w_hhprime[h][h_prime] = 0  # Set to 0 if not compatible
+        
+        return Rounded_w_hhprime
