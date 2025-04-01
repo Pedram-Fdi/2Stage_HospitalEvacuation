@@ -225,19 +225,50 @@ class ProgressiveHedging(object):
             self.TraceFile.close()
 
     def ComputeConvergenceX(self):
-        #if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- ComputeConvergenceX")
+
         difference = 0
         for w in self.ScenarioNrSet:
             nw = self.NewIndexOfScenario[w]
             mm = self.BatchofScenario[w]
-            for i in self.Instance.FacilitySet:    
+            for i in self.Instance.ACFSet:    
                 difference += self.ScenarioSet[w].Probability \
-                                * math.pow(self.CurrentSolution[mm].FacilityEstablishment_x_wi[nw][i] - 
-                                            self.CurrentImplementableSolution.FacilityEstablishment_x_wi[w][i], 2)
+                                * math.pow(self.CurrentSolution[mm].ACFEstablishment_x_wi[nw][i] - 
+                                            self.CurrentImplementableSolution.ACFEstablishment_x_wi[w][i], 2)
 
-        #if Constants.Debug: print("difference_x: ", difference)
         convergence = math.sqrt(difference)
-        #if Constants.Debug: print("convergence: ", convergence)
+
+        return convergence
+    
+    def ComputeConvergenceThetaVar(self):
+
+        difference = 0
+        for w in self.ScenarioNrSet:
+            nw = self.NewIndexOfScenario[w]
+            mm = self.BatchofScenario[w]
+            for i in self.Instance.ACFSet:
+                for m in self.Instance.RescueVehicleSet:
+                    difference += self.ScenarioSet[w].Probability \
+                                  * math.pow(self.CurrentSolution[mm].LandRescueVehicle_thetaVar_wim[nw][i][m] - 
+                                             self.CurrentImplementableSolution.LandRescueVehicle_thetaVar_wim[w][i][m], 2)
+
+        convergence = math.sqrt(difference)
+
+        return convergence
+    
+    def ComputeConvergenceW(self):
+
+        difference = 0
+        for w in self.ScenarioNrSet:
+            nw = self.NewIndexOfScenario[w]
+            mm = self.BatchofScenario[w]
+            for h in self.Instance.HospitalSet:
+                for hprime in self.Instance.HospitalSet:
+                    difference += self.ScenarioSet[w].Probability \
+                                  * math.pow(self.CurrentSolution[mm].BackupHospital_W_whhPrime[nw][h][hprime] - 
+                                             self.CurrentImplementableSolution.BackupHospital_W_whhPrime[w][h][hprime], 2)
+
+        convergence = math.sqrt(difference)
+
         return convergence
 
     def Compute_OptimalityGap_X(self):
@@ -282,14 +313,24 @@ class ProgressiveHedging(object):
         mm = self.BatchofScenario[w]
         linterm = 0
 
-        linterm = linterm + sum(self.LagrangianFacilityEstablishment[w][i] \
-                                * (self.CurrentSolution[mm].FacilityEstablishment_x_wi[nw][i])
-                                for i in self.Instance.FacilitySet)
+        linterm = linterm + sum(self.LagrangianACFEstablishment[w][i] \
+                                * (self.CurrentSolution[mm].ACFEstablishment_x_wi[nw][i])
+                                for i in self.Instance.ACFSet)
+        
+        linterm = linterm + sum(self.LagrangianLandRescueVehicle[w][i][m] \
+                                * (self.CurrentSolution[mm].LandRescueVehicle_thetaVar_wim[nw][i][m])
+                                for m in self.Instance.RescueVehicleSet
+                                for i in self.Instance.ACFSet)
+        
+        linterm = linterm + sum(self.LagrangianBackupHospital[w][h][hprime] \
+                                * (self.CurrentSolution[mm].BackupHospital_W_whhPrime[nw][h][hprime])
+                                for hprime in self.Instance.HospitalSet
+                                for h in self.Instance.HospitalSet)
 
         return linterm
         
     def GetLinearPenalty(self):
-        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GetLinearPenalty")
+
         result = sum(self.ScenarioSet[w].Probability * (self.GetLinearPenaltyForScenario(w))
                      for w in self.ScenarioNrSet)
 
@@ -303,13 +344,22 @@ class ProgressiveHedging(object):
         quadterm = 0
 
         quadterm = quadterm + sum(Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter \
-                                    * math.pow((self.CurrentSolution[mm].FacilityEstablishment_x_wi[nw][i]), 2)
-                                    for i in self.Instance.FacilitySet)
+                                    * math.pow((self.CurrentSolution[mm].ACFEstablishment_x_wi[nw][i]), 2)
+                                    for i in self.Instance.ACFSet)
 
+        quadterm = quadterm + sum(Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter \
+                                    * math.pow((self.CurrentSolution[mm].LandRescueVehicle_thetaVar_wim[nw][i][m]), 2)
+                                    for m in self.Instance.RescueVehicleSet
+                                    for i in self.Instance.ACFSet)        
+
+        quadterm = quadterm + sum(Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter \
+                                    * math.pow((self.CurrentSolution[mm].BackupHospital_W_whhPrime[nw][h][hprime]), 2)
+                                    for hprime in self.Instance.HospitalSet
+                                    for h in self.Instance.HospitalSet)  
+        
         return quadterm
 
     def GetQuadraticPenalty(self):
-        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GetQuadraticPenalty")
 
         result = sum(self.ScenarioSet[w].Probability * self.GetQuadraticPenaltyForScenario(w)
                      for w in self.ScenarioNrSet)
@@ -317,14 +367,13 @@ class ProgressiveHedging(object):
         return result
 
     def RateQuadLinear(self):
-        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- GetQuadraticPenalty")
+
 
         result = self.GetQuadraticPenalty()/ (self.Getlambda_LinearLagrangianterm())
 
         return result
 
     def Getlambda_LinearLagrangianterm(self):
-        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- Getlambda_LinearLagrangianterm")
 
         result = sum( self.ScenarioSet[w].Probability * \
                       (self.GetLinearPenaltyForScenario(w) + self.CurrentSolution[self.BatchofScenario[w]].TotalCost)
@@ -345,10 +394,24 @@ class ProgressiveHedging(object):
         result = 0
 
         result = result + sum(self.ScenarioSet[w].Probability \
-                                * math.pow(self.CurrentImplementableSolution.FacilityEstablishment_x_wi[w][i]
-                                - self.PreviousImplementableSolution.FacilityEstablishment_x_wi[w][i], 2)
-                                for i in self.Instance.FacilitySet
+                                * math.pow(self.CurrentImplementableSolution.ACFEstablishment_x_wi[w][i]
+                                - self.PreviousImplementableSolution.ACFEstablishment_x_wi[w][i], 2)
+                                for i in self.Instance.ACFSet
                                 for w in self.ScenarioNrSet)
+
+        result = result + sum(self.ScenarioSet[w].Probability \
+                                * math.pow(self.CurrentImplementableSolution.LandRescueVehicle_thetaVar_wim[w][i][m]
+                                - self.PreviousImplementableSolution.LandRescueVehicle_thetaVar_wim[w][i][m], 2)
+                                for m in self.Instance.RescueVehicleSet
+                                for i in self.Instance.ACFSet
+                                for w in self.ScenarioNrSet)
+
+        result = result + sum(self.ScenarioSet[w].Probability \
+                                * math.pow(self.CurrentImplementableSolution.BackupHospital_W_whhPrime[w][h][hprime]
+                                - self.PreviousImplementableSolution.BackupHospital_W_whhPrime[w][h][hprime], 2)
+                                for hprime in self.Instance.HospitalSet
+                                for h in self.Instance.HospitalSet
+                                for w in self.ScenarioNrSet)                
         return result
 
     def GetDualConvergenceIndice(self):
@@ -909,22 +972,30 @@ class ProgressiveHedging(object):
                     self.ComputeLagrangian(self.lambda_LinearLagACFEstablishment[w][i],
                                             self.CurrentSolution[mm].ACFEstablishment_x_wi[nw][i],
                                             self.CurrentImplementableSolution.ACFEstablishment_x_wi[w][i])
+            
+            ############################# Land Rescue Vehicle
+            for i in self.Instance.ACFSet:
+                for m in self.Instance.RescueVehicleSet:
+                    self.lambda_LinearLagLandRescueVehicle[w][i][m], self.LagrangianLandRescueVehicle[w][i][m] = \
+                        self.ComputeLagrangian(self.lambda_LinearLagLandRescueVehicle[w][i][m],
+                                                self.CurrentSolution[mm].LandRescueVehicle_thetaVar_wim[nw][i][m],
+                                                self.CurrentImplementableSolution.LandRescueVehicle_thetaVar_wim[w][i][m])
             ############################# Facility Establishment
-            for i in self.Instance.FacilitySet:
-                self.lambda_LinearLagFacilityEstablishment[w][i], self.LagrangianFacilityEstablishment[w][i] = \
-                    self.ComputeLagrangian(self.lambda_LinearLagFacilityEstablishment[w][i],
-                                            self.CurrentSolution[mm].FacilityEstablishment_x_wi[nw][i],
-                                            self.CurrentImplementableSolution.FacilityEstablishment_x_wi[w][i])
-            ############################# Facility Establishment
-            for i in self.Instance.FacilitySet:
-                self.lambda_LinearLagFacilityEstablishment[w][i], self.LagrangianFacilityEstablishment[w][i] = \
-                    self.ComputeLagrangian(self.lambda_LinearLagFacilityEstablishment[w][i],
-                                            self.CurrentSolution[mm].FacilityEstablishment_x_wi[nw][i],
-                                            self.CurrentImplementableSolution.FacilityEstablishment_x_wi[w][i])
+            for h in self.Instance.HospitalSet:
+                for hprime in self.Instance.HospitalSet:
+                    self.lambda_LinearLagBackupHospital[w][h][hprime], self.LagrangianBackupHospital[w][h][hprime] = \
+                        self.ComputeLagrangian(self.lambda_LinearLagBackupHospital[w][h][hprime],
+                                                self.CurrentSolution[mm].BackupHospital_W_whhPrime[nw][h][hprime],
+                                                self.CurrentImplementableSolution.BackupHospital_W_whhPrime[w][h][hprime])
         if(Constants.Debug): 
-            print("lambda_Linear Lagrangian:\n", np.round(self.lambda_LinearLagFacilityEstablishment, 3))
-            print("The coefficient of x after combining the Quadratic and Linear penalty::\n", 
-                  np.round(self.LagrangianFacilityEstablishment, 3))
+            print("lambda_Linear Lagrangian (x):\n", np.round(self.lambda_LinearLagACFEstablishment, 3))
+            print("The coefficient of x after combining the Quadratic and Linear penalty::\n", np.round(self.LagrangianACFEstablishment, 3))
+            print("----------------------")
+            print("lambda_Linear Lagrangian (thetaVar):\n", np.round(self.lambda_LinearLagLandRescueVehicle, 3))
+            print("The coefficient of thetaVar after combining the Quadratic and Linear penalty::\n", np.round(self.LagrangianLandRescueVehicle, 3))
+            print("----------------------")
+            print("lambda_Linear Lagrangian (w):\n", np.round(self.lambda_LinearLagBackupHospital, 3))
+            print("The coefficient of w after combining the Quadratic and Linear penalty::\n", np.round(self.LagrangianBackupHospital, 3))
             print("----------------------")
 
     def ComputeLagrangian(self, prevlag, independentvalue, implementablevalue):

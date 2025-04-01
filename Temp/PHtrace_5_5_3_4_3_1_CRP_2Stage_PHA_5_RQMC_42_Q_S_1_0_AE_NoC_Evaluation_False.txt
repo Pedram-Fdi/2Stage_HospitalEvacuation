@@ -1,1 +1,2 @@
 Start the Progressive Hedging algorithm 
+Iteration: 1, Duration: 4.46, GapX: 0.69, UB: 8113090.94, linear penalty: -2.29, quadratic penalty: 1.18, Multiplier: 0.010000, primal conv: -1.00, dual conv: -1.00, Rate Large Change(l): -1.00, rate quad_lin(s): 0.00, rateprimaldual(l<-): -1.00, ratedualprimal(l->): -1.00, convergenceX: 0.69
