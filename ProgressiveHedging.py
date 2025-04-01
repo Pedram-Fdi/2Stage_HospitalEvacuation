@@ -294,14 +294,83 @@ class ProgressiveHedging(object):
             # Iterate over the scenarios in the current batch
             for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[m]):
                 nw = self.NewIndexOfScenario[scenario]
-                for i in self.Instance.FacilitySet:
+                for i in self.Instance.ACFSet:
                     # Compute the squared difference between the two solutions for each variable
                     difference += self.ScenarioSet[scenario].Probability * \
                                 math.pow(
-                                    last_solution.FacilityEstablishment_x_wi[nw][i] -
-                                    second_last_solution.FacilityEstablishment_x_wi[nw][i],
-                                    2
-                                )
+                                    last_solution.ACFEstablishment_x_wi[nw][i] -
+                                    second_last_solution.ACFEstablishment_x_wi[nw][i],
+                                    2)
+
+        # Compute the convergence gap as the square root of the accumulated differences
+        convergence = math.sqrt(difference)
+
+        return convergence
+    
+    def Compute_OptimalityGap_ThetaVar(self):
+        """
+        Compute the gap based on the difference between the last two solutions.
+        """
+        # Initialize the convergence gap
+        difference = 0
+
+        for m, solution_deque in self.LastTwoSolutionsPerMIP.items():
+            # Ensure we have at least two solutions to compare
+            if len(solution_deque) < 2:
+                if Constants.Debug:
+                    print(f"Skipping MIP {m}, not enough solutions in deque")
+                continue
+
+            # Retrieve the last two solutions
+            last_solution = solution_deque[-1]
+            second_last_solution = solution_deque[-2]
+
+            # Iterate over the scenarios in the current batch
+            for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[m]):
+                nw = self.NewIndexOfScenario[scenario]
+                for i in self.Instance.ACFSet:
+                    for m in self.Instance.RescueVehicleSet:
+                        # Compute the squared difference between the two solutions for each variable
+                        difference += self.ScenarioSet[scenario].Probability * \
+                                math.pow(
+                                    last_solution.LandRescueVehicle_thetaVar_wim[nw][i][m] -
+                                    second_last_solution.LandRescueVehicle_thetaVar_wim[nw][i][m],
+                                    2)
+
+        # Compute the convergence gap as the square root of the accumulated differences
+        convergence = math.sqrt(difference)
+
+        return convergence
+    
+    def Compute_OptimalityGap_W(self):
+        """
+        Compute the gap based on the difference between the last two solutions.
+        """
+        # Initialize the convergence gap
+        difference = 0
+
+        for m, solution_deque in self.LastTwoSolutionsPerMIP.items():
+            # Ensure we have at least two solutions to compare
+            if len(solution_deque) < 2:
+                if Constants.Debug:
+                    print(f"Skipping MIP {m}, not enough solutions in deque")
+                continue
+
+            # Retrieve the last two solutions
+            last_solution = solution_deque[-1]
+            second_last_solution = solution_deque[-2]
+
+            # Iterate over the scenarios in the current batch
+            for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[m]):
+                nw = self.NewIndexOfScenario[scenario]
+                for h in self.Instance.HospitalSet:
+                    for hprime in self.Instance.HospitalSet:
+                        # Compute the squared difference between the two solutions for each variable
+                        difference += self.ScenarioSet[scenario].Probability * \
+                                math.pow(
+                                    last_solution.BackupHospital_W_whhPrime[nw][h][hprime] -
+                                    second_last_solution.BackupHospital_W_whhPrime[nw][h][hprime],
+                                    2)
 
         # Compute the convergence gap as the square root of the accumulated differences
         convergence = math.sqrt(difference)
@@ -535,14 +604,16 @@ class ProgressiveHedging(object):
                 ratedualprimal = self.RateDualPrimal()
 
             trace_message = (
-                "Iteration: %r, Duration: %.2f, GapX: %.2f, UB: %.2f, linear penalty: %.2f, "
+                "Iteration: %r, Duration: %.2f, GapX: %.2f, gapThetaVar: %.2f, gapW: %.2f, UB: %.2f, linear penalty: %.2f, "
                 "quadratic penalty: %.2f, Multiplier: %.6f, primal conv: %.2f, dual conv: %.2f, "
                 "Rate Large Change(l): %.2f, rate quad_lin(s): %.2f, rateprimaldual(l<-): %.2f, "
-                "ratedualprimal(l->): %.2f, convergenceX: %.2f\n"
+                "ratedualprimal(l->): %.2f\n"
                 % (
                     self.CurrentIteration,
                     self.duration,
                     gapX,
+                    gapThetaVar,
+                    gapW,
                     self.CurrentImplementableSolution.TotalCost,
                     lpenalty,
                     qpenalty,
@@ -553,7 +624,6 @@ class ProgressiveHedging(object):
                     ratequad_lin,
                     rateprimaldual,
                     ratedualprimal,
-                    self.ComputeConvergenceX(),
                 )
             )
             self.WriteInTraceFile(trace_message)
@@ -561,7 +631,6 @@ class ProgressiveHedging(object):
         return result
 
     def UpdatePenaltyParameter_rho_x(self):
-        if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- UpdatePenaltyParameter_rho_x")
 
         print("Iteration: ", self.CurrentIteration)
         # Compute the Non-Anticipativity Gap (NA Gap) and Partial Optimality Gap
@@ -628,6 +697,73 @@ class ProgressiveHedging(object):
         self.PreviousOptimalityGap = OptimalityGap
         print("------")
 
+    def UpdatePenaltyParameter_rho(self): 
+        # Compute the Non-Anticipativity Gap for x and y combined.
+        # For example, you could compute:
+        NAGap_g_x = self.ComputeConvergenceX()
+        NAGap_g_ThetaVar = self.ComputeConvergenceThetaVar()
+        NAGap_g_W = self.ComputeConvergenceW()  
+        NAGap_g = NAGap_g_x + NAGap_g_ThetaVar + NAGap_g_W  # Or use a weighted sum if needed
+        
+        # Compute the Partial Optimality Gap for x and y combined.
+        Partial_Optimality_Gap_x = self.Compute_OptimalityGap_X()
+        Partial_Optimality_Gap_ThetaVar = self.Compute_OptimalityGap_ThetaVar() 
+        Partial_Optimality_Gap_W = self.Compute_OptimalityGap_W() 
+        Partial_Optimality_Gap = Partial_Optimality_Gap_x + Partial_Optimality_Gap_ThetaVar + Partial_Optimality_Gap_W
+
+        # Calculate the Overall Optimality Gap
+        OptimalityGap = NAGap_g + Partial_Optimality_Gap
+        print("OptimalityGap: ", OptimalityGap)
+
+        # Calculate tau: If a previous optimality gap exists, update tau; otherwise, use the latest stored tau.
+        if self.PreviousOptimalityGap is not None:
+            tau = OptimalityGap / self.PreviousOptimalityGap
+        else:
+            tau = self.tauHistory_x[-1]  # Here, you might rename your history to reflect x and y combined
+        self.tauHistory_x.append(tau)
+
+        # Update gamma based on the calculated tau
+        gamma = max(0.1, min(0.9, self.tauHistory_x[-1] - 0.6))
+        print("gamma: ", gamma)
+
+        # Update sigma based on the calculated gamma and tau, and previous sigma
+        sigma = (1 - gamma) * self.sigmaHistory_x[-1] + gamma * self.tauHistory_x[-1]
+        self.sigmaHistory_x.append(sigma)
+
+        # Update zeta based on sigma
+        zeta = np.sqrt(1.1 * self.sigmaHistory_x[-1])
+
+        # Update alpha based on previous alpha and the ratio NAGap/OptimalityGap
+        alpha = 0.8 * self.alphaHistory_x[-1] + 0.2 * (NAGap_g / OptimalityGap)
+        self.alphaHistory_x.append(alpha)
+        
+        # Update beta based on previous beta and new alpha
+        beta = 0.98 * self.betaHistory_x[-1] + 0.02 * self.alphaHistory_x[-1]
+        self.betaHistory_x.append(beta)
+
+        # Update contraction rate c based on new beta
+        c = max(0.95, ((1 - (2 * self.betaHistory_x[-1])) / (1 - self.betaHistory_x[-1])))
+        print("c: ", c)
+
+        # Update h based on new beta and alpha
+        h = max(c + (((1 - c) / self.betaHistory_x[-1]) * self.alphaHistory_x[-1]),
+                1 + ((self.alphaHistory_x[-1] - self.betaHistory_x[-1]) / (1 - self.betaHistory_x[-1])))
+        print("h: ", h)
+        
+        # Update q based on zeta, h, and current iteration using a cooling factor
+        q = pow(max(zeta, h), (1 / (1 + 0.01 * (self.CurrentIteration - 2))))
+        print("q: ", q)
+
+        print("Previous rho: ", self.rho_PenaltyParameter)
+        new_rho = max(0.01, min(100, q * self.rho_PenaltyParameter))
+        self.rho_PenaltyParameter = new_rho
+        print("New rho: ", self.rho_PenaltyParameter)
+        
+        # Update the previous optimality gap for next iteration's computation
+        self.PreviousOptimalityGap = OptimalityGap
+        print("------")
+
+
     def SolveScenariosIndependently(self):
         if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- SolveScenariosIndependently")
 
@@ -645,7 +781,9 @@ class ProgressiveHedging(object):
 
             if Constants.Quadratic_to_Linear_PHA:
                 if self.CurrentImplementableSolution:
-                    mip.ModifyMipForFacil_LinearPHA(self.CurrentImplementableSolution.FacilityEstablishment_x_wi)
+                    mip.ModifyMipForACF_LinearPHA(self.CurrentImplementableSolution.ACFEstablishment_x_wi)
+                    mip.ModifyMipForLandRescueVehicle_LinearPHA(self.CurrentImplementableSolution.LandRescueVehicle_thetaVar_wim)
+                    mip.ModifyMipForBackupHospital_LinearPHA(self.CurrentImplementableSolution.BackupHospital_W_whhPrime)
 
             #Solve the model.
             new_solution = mip.Solve(True)
@@ -761,32 +899,88 @@ class ProgressiveHedging(object):
             variable.setAttr(GRB.Attr.Obj, new_coeff)
             mipsolver.LocAloc.update()
             var_name = variable.VarName
-            print("var_name: ", var_name)
+            if Constants.Debug: print("var_name: ", var_name)
         
-        # Update x coefficients for the current batch
+        ########### Update x coefficients for the current batch
         for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[batch]):
-            for i in self.Instance.FacilitySet:
-                x_var_index = mipsolver.GetIndexFacilityEstablishmentVariable(scenario_index, i)
-                variable = mipsolver.Facility_Establishment_Var[x_var_index]
-                new_coeff = (mipsolver.GetfacilityestablishmentCoeff(i) +
-                            self.lambda_LinearLagFacilityEstablishment[scenario][i])
+            for i in self.Instance.ACFSet:
+                x_var_index = mipsolver.GetIndexACFEstablishmentVariable(scenario_index, i)
+                variable = mipsolver.ACFEstablishment_Var[x_var_index]
+                new_coeff = (mipsolver.GetACFestablishmentCoeff_Obj(i) +
+                            self.lambda_LinearLagACFEstablishment[scenario][i])
                 update_variable(variable, new_coeff)
 
         # Update z+ and z- coefficients only (if rho_changed) for the current batch
         if rho_changed:
             for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[batch]):
-                for i in self.Instance.FacilitySet:
-                    zPlus_var_index = mipsolver.GetIndex_PHA_ZPlus_FacilEstablishmentVariable(scenario_index, i)
-                    variable = mipsolver.PHA_ZPlus_FacilEstablishment_Var[zPlus_var_index]
+                for i in self.Instance.ACFSet:
+                    zPlus_var_index = mipsolver.GetIndex_PHA_ZPlus_ACFEstablishmentVariable(scenario_index, i)
+                    variable = mipsolver.PHA_ZPlus_ACFEstablishment_Var[zPlus_var_index]
                     new_coeff = (0 + Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter)
                     update_variable(variable, new_coeff)
 
             for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[batch]):
-                for i in self.Instance.FacilitySet:
-                    zMinus_var_index = mipsolver.GetIndex_PHA_ZMinus_FacilEstablishmentVariable(scenario_index, i)
-                    variable = mipsolver.PHA_ZMinus_FacilEstablishment_Var[zMinus_var_index]
+                for i in self.Instance.ACFSet:
+                    zMinus_var_index = mipsolver.GetIndex_PHA_ZMinus_ACFEstablishmentVariable(scenario_index, i)
+                    variable = mipsolver.PHA_ZMinus_ACFEstablishment_Var[zMinus_var_index]
                     new_coeff = (0 + Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter)
                     update_variable(variable, new_coeff)
+
+        ########### Update thetaVar coefficients for the current batch
+        for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[batch]):
+            for i in self.Instance.ACFSet:
+                for m in self.Instance.RescueVehicleSet:
+                    thetaVar_var_index = mipsolver.GetIndexLandRescueVehicleVariable(scenario_index, i, m)
+                    variable = mipsolver.LandRescueVehicle_Var[thetaVar_var_index]
+                    new_coeff = (mipsolver.GetlandRescueVehicleCoeff(i, m) +
+                                self.lambda_LinearLagLandRescueVehicle[scenario][i][m])
+                    update_variable(variable, new_coeff)
+
+        # Update z+ and z- coefficients only (if rho_changed) for the current batch
+        if rho_changed:
+            for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[batch]):
+                for i in self.Instance.ACFSet:
+                    for m in self.Instance.RescueVehicleSet:
+                        zPlus_var_index = mipsolver.GetIndex_PHA_ZPlus_LandRescueVehicleVariable(scenario_index, i, m)
+                        variable = mipsolver.PHA_ZPlus_LandRescueVehicle_Var[zPlus_var_index]
+                        new_coeff = (0 + Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter)
+                        update_variable(variable, new_coeff)
+
+            for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[batch]):
+                for i in self.Instance.ACFSet:
+                    for m in self.Instance.RescueVehicleSet:
+                        zMinus_var_index = mipsolver.GetIndex_PHA_ZMinus_LandRescueVehicleVariable(scenario_index, i, m)
+                        variable = mipsolver.PHA_ZMinus_LandRescueVehicle_Var[zMinus_var_index]
+                        new_coeff = (0 + Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter)
+                        update_variable(variable, new_coeff)
+
+        ########### Update w coefficients for the current batch
+        for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[batch]):
+            for h in self.Instance.HospitalSet:
+                for hprime in self.Instance.HospitalSet:
+                    w_var_index = mipsolver.GetIndexBackupHospitalVariable(scenario_index, h, hprime)
+                    variable = mipsolver.BackupHospital_Var[w_var_index]
+                    new_coeff = (mipsolver.GetbackupHospitalCoeff(h, hprime) +
+                                self.lambda_LinearLagBackupHospital[scenario][h][hprime])
+                    update_variable(variable, new_coeff)
+
+        # Update z+ and z- coefficients only (if rho_changed) for the current batch
+        if rho_changed:
+            for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[batch]):
+                for h in self.Instance.HospitalSet:
+                    for hprime in self.Instance.HospitalSet:
+                        zPlus_var_index = mipsolver.GetIndex_PHA_ZPlus_BackupHospitalVariable(scenario_index, h, hprime)
+                        variable = mipsolver.PHA_ZPlus_BackupHospital_Var[zPlus_var_index]
+                        new_coeff = (0 + Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter)
+                        update_variable(variable, new_coeff)
+
+            for scenario_index, scenario in enumerate(self.Indexscenarioinbatch[batch]):
+                for h in self.Instance.HospitalSet:
+                    for hprime in self.Instance.HospitalSet:
+                        zMinus_var_index = mipsolver.GetIndex_PHA_ZMinus_BackupHospitalVariable(scenario_index, h, hprime)
+                        variable = mipsolver.PHA_ZMinus_BackupHospital_Var[zMinus_var_index]
+                        new_coeff = (0 + Constants.PHCoeeff_QuadraticPart * self.rho_PenaltyParameter)
+                        update_variable(variable, new_coeff)
 
     def CreateImplementableSolution(self):
         if Constants.Debug: print("\n We are in 'ProgressiveHedging' Class -- CreateImplementableSolution")
@@ -1066,7 +1260,7 @@ class ProgressiveHedging(object):
                 if Constants.Debug: print(f"Updated rho_PenaltyParameter to {self.rho_PenaltyParameter} after {self.CurrentIteration} iterations.")
             
             if (Constants.Dynamic_Learning_rho_PenaltyParameter) and (self.CurrentIteration > 1):
-                self.UpdatePenaltyParameter_rho_x()
+                self.UpdatePenaltyParameter_rho()
 
             # Update the lagrangian multiplier
             self.UpdateLagragianMultipliers()

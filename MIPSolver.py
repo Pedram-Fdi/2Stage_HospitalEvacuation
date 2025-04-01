@@ -210,7 +210,7 @@ class MIPSolver(object):
         self.NrACFEstablishmentVariables = self.NrScenario * self.Instance.NrACFs        # We create x_si, since we may develope PHA to solve the problem
         if Constants.We_Are_in_PHA and Constants.Quadratic_to_Linear_PHA:
             self.Nr_PHA_ZPlus_ACFEstablishmentVariables = self.NrScenario * self.Instance.NrACFs
-            self.Nr_PHA_ZMinus_ACFEstablishmentVariables = self.NrScenario * self.Instance.ACFs 
+            self.Nr_PHA_ZMinus_ACFEstablishmentVariables = self.NrScenario * self.Instance.NrACFs 
         
         self.NrLandRescueVehicleVariables = self.NrScenario * self.Instance.NrACFs * self.Instance.NrRescueVehicles        
         if Constants.We_Are_in_PHA and Constants.Quadratic_to_Linear_PHA:
@@ -1232,37 +1232,104 @@ class MIPSolver(object):
                             self.EvacuationBackupConnectionConstraintNR[w][t][h][hprime] = constraint
 
     #The following constraint is for linearization of |x-x\{Bar}| in the PHA's objective function.
-    def CreatLinearFacilPHAConstraint(self):
-        if Constants.Debug: print("\n We are in 'MIPSolver' Class -- CreatLinearPHAConstraint")
+    def CreatLinearACFPHAConstraint(self):
 
         for w in self.ScenarioSet:
-            for i in self.Instance.FacilitySet:
+            for i in self.Instance.ACFSet:
 
-                vars_x = [self.GetIndexFacilityEstablishmentVariable(w, i)]
+                vars_x = [self.GetIndexACFEstablishmentVariable(w, i)]
 
                 coeff_x = [-1.0]
 
-                vars_zPlus = [self.GetIndex_PHA_ZPlus_FacilEstablishmentVariable(w, i)]
+                vars_zPlus = [self.GetIndex_PHA_ZPlus_ACFEstablishmentVariable(w, i)]
                 coeff_zPlus = [1.0]
                 
-                vars_zMinus = [self.GetIndex_PHA_ZMinus_FacilEstablishmentVariable(w, i)]
+                vars_zMinus = [self.GetIndex_PHA_ZMinus_ACFEstablishmentVariable(w, i)]
                 coeff_zMinus = [-1.0]
 
                 ############ Create the left-hand side of the constraint
-                LeftHandSide_x = gp.quicksum(coeff_x[i] * self.Facility_Establishment_Var[vars_x[i]] for i in range(len(vars_x)))
-                LeftHandSide_zPlus = gp.quicksum(coeff_zPlus[i] * self.PHA_ZPlus_FacilEstablishment_Var[vars_zPlus[i]] for i in range(len(vars_zPlus)))
-                LeftHandSide_zMinus = gp.quicksum(coeff_zMinus[i] * self.PHA_ZMinus_FacilEstablishment_Var[vars_zMinus[i]] for i in range(len(vars_zMinus)))
+                LeftHandSide_x = gp.quicksum(coeff_x[i] * self.ACFEstablishment_Var[vars_x[i]] for i in range(len(vars_x)))
+                LeftHandSide_zPlus = gp.quicksum(coeff_zPlus[i] * self.PHA_ZPlus_ACFEstablishment_Var[vars_zPlus[i]] for i in range(len(vars_zPlus)))
+                LeftHandSide_zMinus = gp.quicksum(coeff_zMinus[i] * self.PHA_ZMinus_ACFEstablishment_Var[vars_zMinus[i]] for i in range(len(vars_zMinus)))
                 
                 LeftHandSide = LeftHandSide_x + LeftHandSide_zPlus + LeftHandSide_zMinus
                 
                 ############ Define the right-hand side (RHS) of the constraint
                 RightHandSide = -1               #For starting, we set the RHS to 1, BUT we dynamically update it later in PHA class!
                 ############ Add the constraint to the model
-                constraint_name = f"LinearPHA_w_{w}_i_{i}"
+                constraint_name = f"LinearACFPHA_w_{w}_i_{i}"
                 
                 constraint = self.LocAloc.addConstr(LeftHandSide == RightHandSide, name=constraint_name)
                 
-                self.LinearPHA_FacilConstraintNR[w][i] = constraint
+                self.LinearPHA_ACFEstablishmentConstraintNR[w][i] = constraint
+    
+    #The following constraint is for linearization of |x-x\{Bar}| in the PHA's objective function.
+    def CreatLinearLandRescueVehiclePHAConstraint(self):
+        if Constants.Debug: print("\n We are in 'MIPSolver' Class -- CreatLinearPHAConstraint")
+
+        for w in self.ScenarioSet:
+            for i in self.Instance.ACFSet:
+                for m in self.Instance.RescueVehicleSet:
+
+                    vars_thetaVar = [self.GetIndexLandRescueVehicleVariable(w, i, m)]
+
+                    coeff_thetaVar = [-1.0]
+
+                    vars_zPlus = [self.GetIndex_PHA_ZPlus_LandRescueVehicleVariable(w, i, m)]
+                    coeff_zPlus = [1.0]
+                    
+                    vars_zMinus = [self.GetIndex_PHA_ZMinus_LandRescueVehicleVariable(w, i, m)]
+                    coeff_zMinus = [-1.0]
+
+                    ############ Create the left-hand side of the constraint
+                    LeftHandSide_thetaVar = gp.quicksum(coeff_thetaVar[i] * self.LandRescueVehicle_Var[vars_thetaVar[i]] for i in range(len(vars_thetaVar)))
+                    LeftHandSide_zPlus = gp.quicksum(coeff_zPlus[i] * self.PHA_ZPlus_LandRescueVehicle_Var[vars_zPlus[i]] for i in range(len(vars_zPlus)))
+                    LeftHandSide_zMinus = gp.quicksum(coeff_zMinus[i] * self.PHA_ZMinus_LandRescueVehicle_Var[vars_zMinus[i]] for i in range(len(vars_zMinus)))
+                    
+                    LeftHandSide = LeftHandSide_thetaVar + LeftHandSide_zPlus + LeftHandSide_zMinus
+                    
+                    ############ Define the right-hand side (RHS) of the constraint
+                    RightHandSide = -1               #For starting, we set the RHS to 1, BUT we dynamically update it later in PHA class!
+                    ############ Add the constraint to the model
+                    constraint_name = f"LinearLandRescueVehiclePHA_w_{w}_i_{i}_m_{m}"
+                    
+                    constraint = self.LocAloc.addConstr(LeftHandSide == RightHandSide, name=constraint_name)
+                    
+                    self.LinearPHA_LandRescueVehicleConstraintNR[w][i][m] = constraint
+    
+    #The following constraint is for linearization of |x-x\{Bar}| in the PHA's objective function.
+    def CreatLinearBackupHospitalPHAConstraint(self):
+        if Constants.Debug: print("\n We are in 'MIPSolver' Class -- CreatLinearPHAConstraint")
+
+        for w in self.ScenarioSet:
+            for h in self.Instance.HospitalSet:
+                for hprime in self.Instance.HospitalSet:
+
+                    vars_w = [self.GetIndexBackupHospitalVariable(w, h, hprime)]
+
+                    coeff_w = [-1.0]
+
+                    vars_zPlus = [self.GetIndex_PHA_ZPlus_BackupHospitalVariable(w, h, hprime)]
+                    coeff_zPlus = [1.0]
+                    
+                    vars_zMinus = [self.GetIndex_PHA_ZMinus_BackupHospitalVariable(w, h, hprime)]
+                    coeff_zMinus = [-1.0]
+
+                    ############ Create the left-hand side of the constraint
+                    LeftHandSide_w = gp.quicksum(coeff_w[i] * self.BackupHospital_Var[vars_w[i]] for i in range(len(vars_w)))
+                    LeftHandSide_zPlus = gp.quicksum(coeff_zPlus[i] * self.PHA_ZPlus_BackupHospital_Var[vars_zPlus[i]] for i in range(len(vars_zPlus)))
+                    LeftHandSide_zMinus = gp.quicksum(coeff_zMinus[i] * self.PHA_ZMinus_BackupHospital_Var[vars_zMinus[i]] for i in range(len(vars_zMinus)))
+                    
+                    LeftHandSide = LeftHandSide_w + LeftHandSide_zPlus + LeftHandSide_zMinus
+                    
+                    ############ Define the right-hand side (RHS) of the constraint
+                    RightHandSide = -1               #For starting, we set the RHS to 1, BUT we dynamically update it later in PHA class!
+                    ############ Add the constraint to the model
+                    constraint_name = f"LinearBackupHospitalPHA_w_{w}_i_{h}_h'_{hprime}"
+                    
+                    constraint = self.LocAloc.addConstr(LeftHandSide == RightHandSide, name=constraint_name)
+                    
+                    self.LinearPHA_BackupHospitalConstraintNR[w][h][hprime] = constraint
 
     def CreateCopyGivenACFEstablishmentConstraints(self):
         self.ACFEstablishmentVarConstraintNR = [["" for _ in self.Instance.ACFSet] 
@@ -1694,7 +1761,9 @@ class MIPSolver(object):
             self.CreateNonanticipativityConstraints_W()
 
         if Constants.We_Are_in_PHA and Constants.Quadratic_to_Linear_PHA:
-            self.CreatLinearFacilPHAConstraint()
+            self.CreatLinearACFPHAConstraint()
+            self.CreatLinearLandRescueVehiclePHAConstraint()
+            self.CreatLinearBackupHospitalPHAConstraint()
 
         if self.EvaluateSolution:
             self.CreateCopyGivenACFEstablishmentConstraints()
@@ -2446,22 +2515,56 @@ class MIPSolver(object):
 
         self.LocAloc.update()   
     
-    def ModifyMipForFacil_LinearPHA(self, Implementable_FacilityEstablishment_x_wi):
-        if Constants.Debug: print("\n We are in 'MIPSolver' Class -- ModifyMipForFacil_LinearPHA")
-        print("Implementable_FacilityEstablishment_x_wi:\n", Implementable_FacilityEstablishment_x_wi)
+    def ModifyMipForACF_LinearPHA(self, Implementable_ACFEstablishment_x_wi):
 
         # Update the right-hand side (RHS) of the Linear PHA for Facil constraints
         for w_idx, w in enumerate(self.ScenarioSet):
-            for i_idx, i in enumerate(self.Instance.FacilitySet):
+            for i_idx, i in enumerate(self.Instance.ACFSet):
                 # Calculate the new right-hand side for the constraint
 
-                righthandside = -1.0 * Implementable_FacilityEstablishment_x_wi[w][i]
+                righthandside = -1.0 * Implementable_ACFEstablishment_x_wi[w][i]
 
                 # Retrieve the constraint reference
-                constr_ref = self.LinearPHA_FacilConstraintNR[w_idx][i_idx]
+                constr_ref = self.LinearPHA_ACFEstablishmentConstraintNR[w_idx][i_idx]
                 
                 # Update the RHS of the constraint
                 constr_ref.RHS = righthandside
+
+        self.LocAloc.update()  
+    
+    def ModifyMipForLandRescueVehicle_LinearPHA(self, Implementable_LandRescueVehicle_thetaVar_wim):
+
+        # Update the right-hand side (RHS) of the Linear PHA for Facil constraints
+        for w_idx, w in enumerate(self.ScenarioSet):
+            for i_idx, i in enumerate(self.Instance.ACFSet):
+                for m_idx, m in enumerate(self.Instance.RescueVehicleSet):
+                    # Calculate the new right-hand side for the constraint
+
+                    righthandside = -1.0 * Implementable_LandRescueVehicle_thetaVar_wim[w][i][m]
+
+                    # Retrieve the constraint reference
+                    constr_ref = self.LinearPHA_LandRescueVehicleConstraintNR[w_idx][i_idx][m_idx]
+                    
+                    # Update the RHS of the constraint
+                    constr_ref.RHS = righthandside
+
+        self.LocAloc.update()  
+    
+    def ModifyMipForBackupHospital_LinearPHA(self, Implementable_BackupHospital_W_whhPrime):
+
+        # Update the right-hand side (RHS) of the Linear PHA for Facil constraints
+        for w_idx, w in enumerate(self.ScenarioSet):
+            for h_idx, h in enumerate(self.Instance.HospitalSet):
+                for hprime_idx, hprime in enumerate(self.Instance.HospitalSet):
+                    # Calculate the new right-hand side for the constraint
+
+                    righthandside = -1.0 * Implementable_BackupHospital_W_whhPrime[w][h][hprime]
+
+                    # Retrieve the constraint reference
+                    constr_ref = self.LinearPHA_BackupHospitalConstraintNR[w_idx][h_idx][hprime_idx]
+                    
+                    # Update the RHS of the constraint
+                    constr_ref.RHS = righthandside
 
         self.LocAloc.update()  
 

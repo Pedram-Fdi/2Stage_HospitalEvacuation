@@ -13116,15 +13116,15 @@ Subject To
  CopyGivenNrLandRescueVehicle_w_0_i_1_m_0: thetaVar_w_0_i_1_m_0_index_8
    = 0
  CopyGivenNrLandRescueVehicle_w_0_i_1_m_1: thetaVar_w_0_i_1_m_1_index_9
-   = 0
+   = 3
  CopyGivenNrLandRescueVehicle_w_0_i_1_m_2: thetaVar_w_0_i_1_m_2_index_10
    = 2
  CopyGivenNrLandRescueVehicle_w_0_i_2_m_0: thetaVar_w_0_i_2_m_0_index_11
-   = 0
+   = 34
  CopyGivenNrLandRescueVehicle_w_0_i_2_m_1: thetaVar_w_0_i_2_m_1_index_12
-   = 0
+   = 40
  CopyGivenNrLandRescueVehicle_w_0_i_2_m_2: thetaVar_w_0_i_2_m_2_index_13
-   = 18
+   = 15
  CopyGivenNrLandRescueVehicle_w_0_i_3_m_0: thetaVar_w_0_i_3_m_0_index_14
    = 0
  CopyGivenNrLandRescueVehicle_w_0_i_3_m_1: thetaVar_w_0_i_3_m_1_index_15

@@ -69,7 +69,7 @@ class Constants( object ):
     PHCoeeff_QuadraticPart = 0.5                     # (Do not Change it) (Usually you see (1/2) in mathematical models)
     Dynamic_rho_PenaltyParameter = False             # (Do not Change it) True: Just Increases the penalty parameter (rho) every 10 iterations
     Increase_rate_dynamic_rho = 0.05
-    Dynamic_Learning_rho_PenaltyParameter = False    # (Do not Change it) True: Adgust penalty parameter rho based on: (A progressive hedging method for the optimization of social engagement and opportunistic IoT problems) article
+    Dynamic_Learning_rho_PenaltyParameter = False    # (Do not Change it) True: Adgust penalty parameter rho based on: (Ref: A progressive hedging method for the optimization of social engagement and opportunistic IoT problems) article
     Quadratic_to_Linear_PHA = False                  # (Do not Change it) True: There is not Quadratic part in the Objective function of the PHA anymore based on: (A progressive hedging method for the optimization of social engagement and opportunistic IoT problems) article
 
     ####################### ALNS Algorithm

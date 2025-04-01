@@ -12711,7 +12711,108 @@ Subject To
    - u_A_w_0_t_4_j_1_h_2_i_3_h'_1_m_0_index_3164
    - u_A_w_0_t_4_j_1_h_2_i_3_h'_1_m_1_index_3165
    - u_A_w_0_t_4_j_1_h_2_i_3_h'_1_m_2_index_3166 >= 0
+ LinearACFPHA_w_0_i_0: - x_w_0_i_0_index_0 + z_x_Plus_w_0_i_0_index_3249
+   - z_x_Minus_w_0_i_0_index_3254 = -1
+ LinearACFPHA_w_0_i_1: - x_w_0_i_1_index_1 + z_x_Plus_w_0_i_1_index_3250
+   - z_x_Minus_w_0_i_1_index_3255 = -1
+ LinearACFPHA_w_0_i_2: - x_w_0_i_2_index_2 + z_x_Plus_w_0_i_2_index_3251
+   - z_x_Minus_w_0_i_2_index_3256 = -1
+ LinearACFPHA_w_0_i_3: - x_w_0_i_3_index_3 + z_x_Plus_w_0_i_3_index_3252
+   - z_x_Minus_w_0_i_3_index_3257 = -1
+ LinearACFPHA_w_0_i_4: - x_w_0_i_4_index_4 + z_x_Plus_w_0_i_4_index_3253
+   - z_x_Minus_w_0_i_4_index_3258 = -1
+ LinearLandRescueVehiclePHA_w_0_i_0_m_0: - thetaVar_w_0_i_0_m_0_index_5
+   + z_thetaVar_Plus_w_0_i_0_m_0_index_3259
+   - z_thetaVar_Minus_w_0_i_0_m_0_index_3274 = -1
+ LinearLandRescueVehiclePHA_w_0_i_0_m_1: - thetaVar_w_0_i_0_m_1_index_6
+   + z_thetaVar_Plus_w_0_i_0_m_1_index_3264
+   - z_thetaVar_Minus_w_0_i_0_m_1_index_3279 = -1
+ LinearLandRescueVehiclePHA_w_0_i_0_m_2: - thetaVar_w_0_i_0_m_2_index_7
+   + z_thetaVar_Plus_w_0_i_0_m_2_index_3269
+   - z_thetaVar_Minus_w_0_i_0_m_2_index_3284 = -1
+ LinearLandRescueVehiclePHA_w_0_i_1_m_0: - thetaVar_w_0_i_1_m_0_index_8
+   + z_thetaVar_Plus_w_0_i_1_m_0_index_3260
+   - z_thetaVar_Minus_w_0_i_1_m_0_index_3275 = -1
+ LinearLandRescueVehiclePHA_w_0_i_1_m_1: - thetaVar_w_0_i_1_m_1_index_9
+   + z_thetaVar_Plus_w_0_i_1_m_1_index_3265
+   - z_thetaVar_Minus_w_0_i_1_m_1_index_3280 = -1
+ LinearLandRescueVehiclePHA_w_0_i_1_m_2: - thetaVar_w_0_i_1_m_2_index_10
+   + z_thetaVar_Plus_w_0_i_1_m_2_index_3270
+   - z_thetaVar_Minus_w_0_i_1_m_2_index_3285 = -1
+ LinearLandRescueVehiclePHA_w_0_i_2_m_0: - thetaVar_w_0_i_2_m_0_index_11
+   + z_thetaVar_Plus_w_0_i_2_m_0_index_3261
+   - z_thetaVar_Minus_w_0_i_2_m_0_index_3276 = -1
+ LinearLandRescueVehiclePHA_w_0_i_2_m_1: - thetaVar_w_0_i_2_m_1_index_12
+   + z_thetaVar_Plus_w_0_i_2_m_1_index_3266
+   - z_thetaVar_Minus_w_0_i_2_m_1_index_3281 = -1
+ LinearLandRescueVehiclePHA_w_0_i_2_m_2: - thetaVar_w_0_i_2_m_2_index_13
+   + z_thetaVar_Plus_w_0_i_2_m_2_index_3271
+   - z_thetaVar_Minus_w_0_i_2_m_2_index_3286 = -1
+ LinearLandRescueVehiclePHA_w_0_i_3_m_0: - thetaVar_w_0_i_3_m_0_index_14
+   + z_thetaVar_Plus_w_0_i_3_m_0_index_3262
+   - z_thetaVar_Minus_w_0_i_3_m_0_index_3277 = -1
+ LinearLandRescueVehiclePHA_w_0_i_3_m_1: - thetaVar_w_0_i_3_m_1_index_15
+   + z_thetaVar_Plus_w_0_i_3_m_1_index_3267
+   - z_thetaVar_Minus_w_0_i_3_m_1_index_3282 = -1
+ LinearLandRescueVehiclePHA_w_0_i_3_m_2: - thetaVar_w_0_i_3_m_2_index_16
+   + z_thetaVar_Plus_w_0_i_3_m_2_index_3272
+   - z_thetaVar_Minus_w_0_i_3_m_2_index_3287 = -1
+ LinearLandRescueVehiclePHA_w_0_i_4_m_0: - thetaVar_w_0_i_4_m_0_index_17
+   + z_thetaVar_Plus_w_0_i_4_m_0_index_3263
+   - z_thetaVar_Minus_w_0_i_4_m_0_index_3278 = -1
+ LinearLandRescueVehiclePHA_w_0_i_4_m_1: - thetaVar_w_0_i_4_m_1_index_18
+   + z_thetaVar_Plus_w_0_i_4_m_1_index_3268
+   - z_thetaVar_Minus_w_0_i_4_m_1_index_3283 = -1
+ LinearLandRescueVehiclePHA_w_0_i_4_m_2: - thetaVar_w_0_i_4_m_2_index_19
+   + z_thetaVar_Plus_w_0_i_4_m_2_index_3273
+   - z_thetaVar_Minus_w_0_i_4_m_2_index_3288 = -1
+ LinearBackupHospitalPHA_w_0_i_0_h'_0: - W_w_0_h_0_h'_0_index_20
+   + z_W_Plus_w_0_i_4_index_3289 - z_W_Minus_w_0_i_4_index_3298 = -1
+ LinearBackupHospitalPHA_w_0_i_0_h'_1: - W_w_0_h_0_h'_1_index_23
+   + z_W_Plus_w_0_i_4_index_3292 - z_W_Minus_w_0_i_4_index_3301 = -1
+ LinearBackupHospitalPHA_w_0_i_0_h'_2: - W_w_0_h_0_h'_2_index_26
+   + z_W_Plus_w_0_i_4_index_3295 - z_W_Minus_w_0_i_4_index_3304 = -1
+ LinearBackupHospitalPHA_w_0_i_1_h'_0: - W_w_0_h_1_h'_0_index_21
+   + z_W_Plus_w_0_i_4_index_3290 - z_W_Minus_w_0_i_4_index_3299 = -1
+ LinearBackupHospitalPHA_w_0_i_1_h'_1: - W_w_0_h_1_h'_1_index_24
+   + z_W_Plus_w_0_i_4_index_3293 - z_W_Minus_w_0_i_4_index_3302 = -1
+ LinearBackupHospitalPHA_w_0_i_1_h'_2: - W_w_0_h_1_h'_2_index_27
+   + z_W_Plus_w_0_i_4_index_3296 - z_W_Minus_w_0_i_4_index_3305 = -1
+ LinearBackupHospitalPHA_w_0_i_2_h'_0: - W_w_0_h_2_h'_0_index_22
+   + z_W_Plus_w_0_i_4_index_3291 - z_W_Minus_w_0_i_4_index_3300 = -1
+ LinearBackupHospitalPHA_w_0_i_2_h'_1: - W_w_0_h_2_h'_1_index_25
+   + z_W_Plus_w_0_i_4_index_3294 - z_W_Minus_w_0_i_4_index_3303 = -1
+ LinearBackupHospitalPHA_w_0_i_2_h'_2: - W_w_0_h_2_h'_2_index_28
+   + z_W_Plus_w_0_i_4_index_3297 - z_W_Minus_w_0_i_4_index_3306 = -1
 Bounds
+ z_x_Plus_w_0_i_0_index_3249 <= 1
+ z_x_Plus_w_0_i_1_index_3250 <= 1
+ z_x_Plus_w_0_i_2_index_3251 <= 1
+ z_x_Plus_w_0_i_3_index_3252 <= 1
+ z_x_Plus_w_0_i_4_index_3253 <= 1
+ z_x_Minus_w_0_i_0_index_3254 <= 1
+ z_x_Minus_w_0_i_1_index_3255 <= 1
+ z_x_Minus_w_0_i_2_index_3256 <= 1
+ z_x_Minus_w_0_i_3_index_3257 <= 1
+ z_x_Minus_w_0_i_4_index_3258 <= 1
+ z_W_Plus_w_0_i_4_index_3289 <= 1
+ z_W_Plus_w_0_i_4_index_3292 <= 1
+ z_W_Plus_w_0_i_4_index_3295 <= 1
+ z_W_Plus_w_0_i_4_index_3290 <= 1
+ z_W_Plus_w_0_i_4_index_3293 <= 1
+ z_W_Plus_w_0_i_4_index_3296 <= 1
+ z_W_Plus_w_0_i_4_index_3291 <= 1
+ z_W_Plus_w_0_i_4_index_3294 <= 1
+ z_W_Plus_w_0_i_4_index_3297 <= 1
+ z_W_Minus_w_0_i_4_index_3298 <= 1
+ z_W_Minus_w_0_i_4_index_3301 <= 1
+ z_W_Minus_w_0_i_4_index_3304 <= 1
+ z_W_Minus_w_0_i_4_index_3299 <= 1
+ z_W_Minus_w_0_i_4_index_3302 <= 1
+ z_W_Minus_w_0_i_4_index_3305 <= 1
+ z_W_Minus_w_0_i_4_index_3300 <= 1
+ z_W_Minus_w_0_i_4_index_3303 <= 1
+ z_W_Minus_w_0_i_4_index_3306 <= 1
 Binaries
  x_w_0_i_0_index_0 x_w_0_i_1_index_1 x_w_0_i_2_index_2 x_w_0_i_3_index_3
  x_w_0_i_4_index_4 W_w_0_h_0_h'_0_index_20 W_w_0_h_0_h'_1_index_23
