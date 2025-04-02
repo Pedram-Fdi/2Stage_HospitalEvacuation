@@ -49,7 +49,7 @@ class Constants( object ):
     PrintOnlyFirstStageDecision = True
     PrintPHATrace = True
     LauchEvalAfterSolve = True 
-    Debug_lp_Files = True
+    Debug_lp_Files = False
     PrintSolutionFileInTMP = False
     Evaluation_Part = False
 
@@ -59,11 +59,11 @@ class Constants( object ):
     
     
     MIPTimeLimit = 12 * 3600            #This is only a time limit to solve the extended model via MIP.
-    ModelOutputFlag = 1             #If it is 0, Prevents Gurobi from showing the optimization process!
+    ModelOutputFlag = 0                 #If it is 0, Prevents Gurobi from showing the optimization process!
 
     ####################### PHA Algorithm
-    We_Are_in_PHA = False                            # Do not Change it
-    PHIterationLimit = 5                          # Previosly set to 10000
+    We_Are_in_PHA = False                            # Do NOT CHANGE IT!
+    PHIterationLimit = 100000                       # Previosly set to 10000
     PHConvergenceTolerence = 0.01        
     Rho_PH_PenaltyParameter= 0.01                    # The best: 0.1
     PHCoeeff_QuadraticPart = 0.5                     # (Do not Change it) (Usually you see (1/2) in mathematical models)
@@ -73,7 +73,7 @@ class Constants( object ):
     Quadratic_to_Linear_PHA = False                  # (Do not Change it) True: There is not Quadratic part in the Objective function of the PHA anymore based on: (A progressive hedging method for the optimization of social engagement and opportunistic IoT problems) article
 
     ####################### ALNS Algorithm
-    Max_ALNS_Iterations = 50
+    Max_ALNS_Iterations = 100000
 
     ####################### BBC Algorithm
     My_EpGap_BBC = 0.01

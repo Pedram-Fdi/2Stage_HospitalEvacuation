@@ -1099,7 +1099,7 @@ class Instance(object):
         # Define the filename using the instance name with a .pkl extension
         if platform.system() == "Linux":
             # Use the absolute path for the Linux system
-            instances_dir = "..."  # Replace with your Linux directory
+            instances_dir = "/home/pfarghad/Myschedulingmodel_3/RL/Instances"  # Replace with your Linux directory
         else:
             # Use the desired path for your local system (Windows in this case)
             instances_dir = r"C:\PhD\Thesis\Papers\3rd\Code\RL\Instances"

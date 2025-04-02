@@ -9,7 +9,6 @@ import torch.optim as optim
 from collections import deque
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
-
 from replay_memory import ReplayMemory, ReplayMemoryDataset
 
 # Neural Network for Deep Q-Learning
