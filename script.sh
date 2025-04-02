@@ -6,66 +6,98 @@ FAILED_JOBS="failed_jobs.txt"
 # Clear previous failed jobs log
 > $FAILED_JOBS
 
-# Parameters you want to easily modify
-MODEL="2Stage"      # Options: "Average" or "2Stage"
-SOLVER="MIP"         # Options: "MIP", "ALNS", "PHA", "BBC"
-NR_SCENARIO="5" 
-PHA_OBJ="Q"          # Options: "Q" (Quadratic) or "L" (Linear)
-PHAPenalty="S"       # Options: "S", "D", or "DL"
-ALNSRL=0             # 0: no RL, 1: use RL in ALNS
-ALNSRL_DEEPQ=0       # 0: Q-Learning, 1: Deep Q-Learning
-BBC_SETTING="NS"     # Options: "NE", "JM", "NM", "JS", "NS", "JW", "NW", "JL", "NL", "AE"
+# Fixed parameter
+MODEL="2Stage"    # Options: "Average" or "2Stage"
+BBC_SETTING="NS"  # Use the appropriate value
 
-# Arrays for different options (if you wish to loop over multiple values)
-SCENARIO_GENERATION=("RQMC")        # Options: "MC", "RQMC", "QMC"
-CLUSTER_METHODS=("KMeansPP")          # Options: "NoC", "KM", "KMPP", "SOM"
+# Independent arrays:
+NR_SCENARIOS=("50" "100" "200" "500")
+SCENARIO_GENERATION=("RQMC")          # Options: "MC", "RQMC", "QMC"
+CLUSTER_METHODS=("NoC")               # Options: "NoC", "KM", "KMPP", "SOM"
 
+# Array for SOLVERS to loop over:
+SOLVERS=("MIP" "ALNS" "PHA")
 
-# Now update the instance parameters.
-# Your new instances have six parts (e.g. "5_5_3_4_3_1_CRP"). Here we loop over each part.
-for ARG1 in 5
-do
-    for ARG2 in 5
-    do
-        for ARG3 in 3
-        do
-            for ARG4 in 4
+for SOLVER in "${SOLVERS[@]}"; do
+  # Set parameter arrays based on the current solver:
+  if [ "$SOLVER" = "MIP" ]; then
+    PHA_OBJS=("Q")
+    PHAPenalties=("S")
+    ALNSRLs=(0)
+    ALNSRL_DEEPQs=(0)
+  elif [ "$SOLVER" = "ALNS" ]; then
+    PHA_OBJS=("Q")
+    PHAPenalties=("S")
+    ALNSRLs=(0 1)
+    # For ALNS, ALNSRL_DEEPQs will be set conditionally below
+  elif [ "$SOLVER" = "PHA" ]; then
+    ALNSRLs=(0)
+    ALNSRL_DEEPQs=(0)
+    PHA_OBJS=("Q" "L")
+    PHAPenalties=("S" "D" "DL")
+  fi
+
+  for NR_SCENARIO in "${NR_SCENARIOS[@]}"; do
+    for PHA_OBJ in "${PHA_OBJS[@]}"; do
+      for PHAPenalty in "${PHAPenalties[@]}"; do
+        for ALNSRL in "${ALNSRLs[@]}"; do
+          # For the ALNS solver, set ALNSRL_DEEPQs based on ALNSRL value:
+          if [ "$SOLVER" = "ALNS" ]; then
+            if [ "$ALNSRL" -eq 0 ]; then
+              ALNSRL_DEEPQs=(0)
+            elif [ "$ALNSRL" -eq 1 ]; then
+              ALNSRL_DEEPQs=(0 1)
+            fi
+          fi
+
+          for ALNSRL_DEEPQ in "${ALNSRL_DEEPQs[@]}"; do
+            # Loop over instance parameters:
+            for ARG1 in 5 6; 
             do
-                for ARG5 in 3
+              for ARG2 in 10 15; 
+              do
+                for ARG3 in 5; 
                 do
-                    for ARG6 in 1
+                  for ARG4 in 10 15; 
+                  do
+                    for ARG5 in 3; 
                     do
+                      for ARG6 in 1 2 3; 
+                      do
                         INSTANCE_NAME="${ARG1}_${ARG2}_${ARG3}_${ARG4}_${ARG5}_${ARG6}_CRP"
-                        echo "Submitting job for instance ${INSTANCE_NAME}"
+                        echo "Submitting job for instance ${INSTANCE_NAME} with: SOLVER=${SOLVER}, NR_SCENARIO=${NR_SCENARIO}, PHA_OBJ=${PHA_OBJ}, PHAPenalty=${PHAPenalty}, ALNSRL=${ALNSRL}, ALNSRL_DEEPQ=${ALNSRL_DEEPQ}"
                         
-                        for SCENARIO_GEN in "${SCENARIO_GENERATION[@]}"
-                        do
-                            for CLUSTER_METHOD in "${CLUSTER_METHODS[@]}"
-                            do
-                                # Submit the job with 11 parameters.
-                                sbatch ./qsub.sh \
-                                    ${INSTANCE_NAME} \
-                                    ${MODEL} \
-                                    ${SOLVER} \
-                                    ${NR_SCENARIO} \
-                                    ${PHA_OBJ} \
-                                    ${PHAPenalty} \
-                                    ${ALNSRL} \
-                                    ${ALNSRL_DEEPQ} \
-                                    ${SETTING} \
-                                    ${SCENARIO_GEN} \
-                                    ${CLUSTER_METHOD}
+                        for SCENARIO_GEN in "${SCENARIO_GENERATION[@]}"; do
+                          for CLUSTER_METHOD in "${CLUSTER_METHODS[@]}"; do
+                            sbatch ./qsub.sh \
+                              ${INSTANCE_NAME} \
+                              ${MODEL} \
+                              ${SOLVER} \
+                              ${NR_SCENARIO} \
+                              ${PHA_OBJ} \
+                              ${PHAPenalty} \
+                              ${ALNSRL} \
+                              ${ALNSRL_DEEPQ} \
+                              ${BBC_SETTING} \
+                              ${SCENARIO_GEN} \
+                              ${CLUSTER_METHOD}
 
-                                if [ $? -ne 0 ]; then
-                                    echo ${INSTANCE_NAME} >> $FAILED_JOBS
-                                fi
-                            done
+                            if [ $? -ne 0 ]; then
+                              echo ${INSTANCE_NAME} >> $FAILED_JOBS
+                            fi
+                          done
                         done
+                      done
                     done
+                  done
                 done
+              done
             done
+          done
         done
+      done
     done
+  done
 done
 
 # Retry failed jobs if any

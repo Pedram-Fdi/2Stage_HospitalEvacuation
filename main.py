@@ -1,4 +1,5 @@
 import os
+from stochastic_location import StochasticLocationAllocation
 from TestIdentificator import TestIdentificator  # Import TestIdentificator class
 from Instance import Instance  # Import Instance class
 from Constants import Constants
@@ -67,10 +68,10 @@ def parseArguments():
     else:
 
         # Mandatory arguments
-        parser.add_argument("--Action", help="Action to perform", type=str, choices=["GenerateInstances", "Solve"], default = "GenerateInstances")
+        parser.add_argument("--Action", help="Action to perform", type=str, choices=["GenerateInstances", "Solve"], default = "Solve")
         parser.add_argument("--Instance", help="Instance name", type=str, default="5_5_3_4_3_1_CRP") #5_5_3_4_3_1_CRP
         parser.add_argument("--Model", help="Stochastic model type", type=str, choices=["Average", "2Stage"], default = "2Stage")
-        parser.add_argument("--Solver", help="Solver type", type=str, choices=["MIP", "ALNS", "PHA", "BBC"], default = "MIP")
+        parser.add_argument("--Solver", help="Solver type", type=str, choices=["MIP", "ALNS", "PHA", "BBC"], default = "ALNS")
         parser.add_argument("--NrScenario", help="The number of scenarios used for optimization (all10 ...)", type=str, default = "5")
         parser.add_argument("--PHAObj", help="Obj. function of PHA either Quadratic or Linear", type=str, choices=["Q", "L"], default = "L")
         parser.add_argument("--PHAPenalty", help="Penalty Parameter (rho) in PHA, Static, Dynamic, dynamic Learning", type=str, choices=["S", "D", "DL"], default = "DL")
@@ -78,7 +79,7 @@ def parseArguments():
         parser.add_argument("--ALNSRL_DeepQ", help="The type of RL we used in ALNS if (ALNSRL==1), Deep Q-Learning(1) or Q-Learning(0)", type=int, choices=["0", "1"], default = 0)
         parser.add_argument("-c", "--bbcsetting", help="Enhancements?", choices=["NE: NoEnhancement", "JM: JustMultiCut", "NM: NoMultiCut", "JS: JustStrongCut", "NS: NoStrongCut", "JW: JustWarmUp", "NW: NoWarmUp", "JL: JustLBF", "NL: NoLBF", "AE: AllEnhancement"], default="AE")
         parser.add_argument("--ScenarioGeneration", help="Which Type of Sampling?", type=str, choices=["MC","RQMC", "QMC"], default="RQMC")
-        parser.add_argument("-Cluster", "--ClusteringMethod", help="The method used for Clustering Scenarios?", type=str, choices=["NoC", "KM", "KMPP", "SOM"], default = "KM") 
+        parser.add_argument("-Cluster", "--ClusteringMethod", help="The method used for Clustering Scenarios?", type=str, choices=["NoC", "KM", "KMPP", "SOM"], default = "NoC") 
 
 
 
@@ -126,12 +127,12 @@ def parseArguments():
 def generate_instances():
     print("Generating instances...")
 
-    for t in range(2, 7, 1):            ## Set it No more than 20 time periods!
-        for i in range(10, 16, 5):
+    for t in range(5, 6, 1):            ## Set it No more than 20 time periods!
+        for i in range(10, 11, 5):
             for h in range(5, 6, 5):
-                for l in range(10, 16, 5):
+                for l in range(15, 16, 30):
                     for m in range(3, 4, 1):
-                        for instance_number in range(1, 4, 1):
+                        for instance_number in range(1, 2, 1):
                             instance_name = f"{t}_{i}_{h}_{l}_{m}_{instance_number}_CRP"
 
                             instance = Instance(instance_name)
