@@ -40,7 +40,7 @@ class Constants( object ):
     SeedArray = [42]#[2934, 875, 3545, 765, 546, 768, 242, 375, 142, 236, 788]
     EvaluationScenarioSeed = 3545
     
-    Debug = False
+    Debug = True
     Obtain_SecondStage_Solution  = True         # Do NOT CHANGE IT! I will use it when I am working on ALNS and wanna save time, avoiding generating ALNS solutions of the second-stage at each iteration!
     PrintSolutionFileToExcel = False            # (Defaul: False) If you set this 'True', then all final values of variables and objective function will be printed in Excel too.
     PrintSolutionFileToPickle = True            # (Defaul: True)
@@ -86,7 +86,7 @@ class Constants( object ):
     CorePointCoeff = 0.5                # For Strong Cut acceleration (# The coefficient of the previous core point value, which should be less than 1!)
 
     ####################### Scenario Clustering
-    ClusteringMethod = "Noc"                    # Do NOT CHANGE IT
+    ClusteringMethod = "NoC"                    # Do NOT CHANGE IT
     Multiplier_NumberofOriginalScenarios = 10   # If you set it to 10, and then choose any type of scenario clustering, then the model cluseter "NrScenario" scenairos from "10 * NrScenario" scenarios!
 
     @staticmethod

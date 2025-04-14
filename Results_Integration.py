@@ -2,8 +2,8 @@ import os
 import pandas as pd
 
 # Input and Output
-input_dir = r"C:\PhD\Thesis\Papers\3rd\Code\Results\1st\Test"
-output_file = r"C:\PhD\Thesis\Papers\3rd\Code\Results\1st\Results.xlsx"
+input_dir = r"C:\PhD\Thesis\Papers\3rd\Code\Results\2nd\Test"
+output_file = r"C:\PhD\Thesis\Papers\3rd\Code\Results\2nd\Results.xlsx"
 
 # Define columns for the summary DataFrame
 columns = [

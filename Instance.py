@@ -41,8 +41,8 @@ class Instance(object):
 
 
         #Domain of Parameters
-        self.Min_ACF_Bed_Capacity = 200
-        self.Max_ACF_Bed_Capacity = 400
+        self.Min_ACF_Bed_Capacity = 250
+        self.Max_ACF_Bed_Capacity = 500
 
         self.m2_Required_for_Each_Patient = 1.3
         self.Cost_of_Each_m2 = 25        
@@ -50,8 +50,8 @@ class Instance(object):
         self.Min_VehicleAssignment_Cost = 0.001
         self.Max_VehicleAssignment_Cost = 0.001
 
-        self.Min_Demand_in_Each_Location = 10 * self.Number_of_Planning_Days
-        self.Max_Demand_in_Each_Location = 150 * self.Number_of_Planning_Days
+        self.Min_Demand_in_Each_Location = 0 * self.Number_of_Planning_Days
+        self.Max_Demand_in_Each_Location = 100 * self.Number_of_Planning_Days
 
         # Injury level percentages
         self.Priority_Patient_Percent = {
@@ -61,23 +61,23 @@ class Instance(object):
 
         self.Do_you_need_point_plot = 0
 
-        self.Min_Hospital_Bed_Capacity = 250
-        self.Max_Hospital_Bed_Capacity = 500        
+        self.Min_Hospital_Bed_Capacity = 400
+        self.Max_Hospital_Bed_Capacity = 600        
 
 
         self.Min_Casualty_Shortage_Cost = 150000
         self.Max_Casualty_Shortage_Cost = 150000
 
-        self.HighPriority_EvacuationRiskCost = 150000   
+        self.HighPriority_EvacuationRiskCost = 100000   
 
         self.Safety_Factor_Rescue_Vehicle_ACF = 3           # (Default for non-case: 5) For having 0 Shortage (For demand between [50,200], its defaul is on 3)
-        self.Safety_Factor_Rescue_Vehicle_Hospital = 3      #For having 0 Shortage (For demand between [50,200], its defaul is on 1.5)
+        self.Safety_Factor_Rescue_Vehicle_Hospital = 4      #For having 0 Shortage (For demand between [50,200], its defaul is on 1.5)
 
-        self.MaxHospitalOccupationRate = 0.80                 # Accurate: 69.8% Ref: https://www.oecd.org/en/publications/health-at-a-glance-2023_7a7afb35-en/full-report/hospital-beds-and-occupancy_10add5df.html
-        self.MinHospitalOccupationRate = 0.60                 # Accurate: 69.8% Ref: https://www.oecd.org/en/publications/health-at-a-glance-2023_7a7afb35-en/full-report/hospital-beds-and-occupancy_10add5df.html
+        self.MinHospitalOccupationRate = 0.50                 # (Accurate for Turkey: 55.3% Ref:https://www.statista.com/statistics/1116612/oecd-hospital-acute-care-occupancy-rates-select-countries-worldwide/) or Accurate: 69.8% Ref: https://www.oecd.org/en/publications/health-at-a-glance-2023_7a7afb35-en/full-report/hospital-beds-and-occupancy_10add5df.html
+        self.MaxHospitalOccupationRate = 0.60                 # (Accurate for Turkey: 55.3% Ref:https://www.statista.com/statistics/1116612/oecd-hospital-acute-care-occupancy-rates-select-countries-worldwide/) or (Accurate: 69.8% Ref: https://www.oecd.org/en/publications/health-at-a-glance-2023_7a7afb35-en/full-report/hospital-beds-and-occupancy_10add5df.html
         
-        self.MaxAerial_ToBeAssigned = 5
-        self.MinAerial_ToBeAssigned = 2
+        self.MinAerial_ToBeAssigned = 5
+        self.MaxAerial_ToBeAssigned = 10
         
         self.MinCoordinationCost = 200                        # if you set min to 2 then the Ref is: (An integrated blood supply chain network design during a pandemic)
         self.MaxCoordinationCost = 900                        # if you set max to 9 then the Ref is:  (An integrated blood supply chain network design during a pandemic)
@@ -137,6 +137,7 @@ class Instance(object):
         self.AerialEvacuationRisk_Exponential = []
 
         self.My_EpGap= 0.0001
+        self.Do_you_want_Dependent_Hospital_Capacities_based_on_Demands = 0
 
     def ComputeIndices(self):
         if Constants.Debug: print("\n We are in 'Instance' Class -- ComputeIndices")
@@ -270,11 +271,18 @@ class Instance(object):
                     self.ForecastedSTDCasualtyDemand[t][j][l] = STD_demand_for_injury_level
 
         ##################################  Calculating Average Hospital Bed Capacity
-        self.Hospital_Bed_Capacity = np.zeros((len(self.HospitalSet)))
-        
+        self.Hospital_Bed_Capacity = np.zeros((len(self.HospitalSet)))  
+
         for h in self.HospitalSet:
-            total_bed = random.randint(self.Min_Hospital_Bed_Capacity, self.Max_Hospital_Bed_Capacity)
-            self.Hospital_Bed_Capacity[h] = total_bed   
+        # Generate total bed for each location and time period
+            if self.Do_you_want_Dependent_Hospital_Capacities_based_on_Demands == 1:
+                total_bed = random.randint(self.Min_Hospital_Bed_Capacity, self.Max_Hospital_Bed_Capacity * (self.NrDisasterAreas/10))
+                self.Hospital_Bed_Capacity[h] = total_bed
+            else:
+                #total_bed = random.randint(self.Min_Hospital_Bed_Capacity, self.Max_Hospital_Bed_Capacity)
+                total_bed = random.randint(self.Min_Hospital_Bed_Capacity, self.Max_Hospital_Bed_Capacity)
+                self.Hospital_Bed_Capacity[h] = total_bed   
+
 
         ##################################  Calculating Land Rescue Vehicle Capacity
 

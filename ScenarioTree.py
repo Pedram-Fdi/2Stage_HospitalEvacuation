@@ -52,7 +52,8 @@ class ScenarioTree:
             CasualtyDemand_param_dim = (self.Instance.NrTimeBucket, self.Instance.NrInjuries, self.Instance.NrDisasterAreas)
             self.CasualtyDemand = self.generate_uncertain_parameter_scenarios(param_dim = CasualtyDemand_param_dim, 
                                                                               Avg = self.Instance.ForecastedAvgCasualtyDemand, 
-                                                                              STD = self.Instance.ForecastedSTDCasualtyDemand)            
+                                                                              STD = self.Instance.ForecastedSTDCasualtyDemand,
+                                                                              Clustering = Constants.ClusteringMethod)            
             self.CasualtyDemand_LBF = self.compute_average_uncertain_parameter_scenario(self.CasualtyDemand, rounding='float')
             if self.AverageScenarioTree:
                 self.CasualtyDemand = self.compute_average_uncertain_parameter_scenario(self.CasualtyDemand, rounding='int')
@@ -62,7 +63,7 @@ class ScenarioTree:
             self.HospitalDisruption = self.generate_uncertain_parameter_scenarios(param_dim = HospitalDisruption_param_dim, 
                                                                                   Avg = self.Instance.ForecastedAvgHospitalDisruption, 
                                                                                   STD = self.Instance.ForecastedSTDHospitalDisruption, 
-                                                                                  rounding='int')            
+                                                                                  rounding='int', Clustering = 'NoC')   ## For Hospital Disruption, if we do not use clustering, we can cover a wider range of uncertain parameters!          
             self.HospitalDisruption_LBF = self.compute_average_uncertain_parameter_scenario(self.HospitalDisruption, rounding='float')
             if self.AverageScenarioTree:
                 self.HospitalDisruption = self.compute_average_uncertain_parameter_scenario(self.HospitalDisruption, rounding='int')
@@ -71,7 +72,8 @@ class ScenarioTree:
             PatientDemand_param_dim = (self.Instance.NrInjuries, self.Instance.NrHospitals)
             self.PatientDemand = self.generate_uncertain_parameter_scenarios(param_dim = PatientDemand_param_dim, 
                                                                              Avg = self.Instance.ForecastedAvgPatientDemand, 
-                                                                             STD = self.Instance.ForecastedSTDPatientDemand)            
+                                                                             STD = self.Instance.ForecastedSTDPatientDemand,
+                                                                             Clustering = Constants.ClusteringMethod)            
             self.PatientDemand_LBF = self.compute_average_uncertain_parameter_scenario(self.PatientDemand, rounding='float')
             if self.AverageScenarioTree:
                 self.PatientDemand = self.compute_average_uncertain_parameter_scenario(self.PatientDemand, rounding='int')
@@ -82,13 +84,16 @@ class ScenarioTree:
                                                                                            Avg = self.Instance.ForecastedAvgPercentagePatientDischarged, 
                                                                                            STD = self.Instance.ForecastedSTDPercentagePatientDischarged, 
                                                                                            rounding='float',
-                                                                                           non_negative=True)            
+                                                                                           non_negative=True,
+                                                                                           Clustering = Constants.ClusteringMethod)            
             self.PatientDischargedPercentage_LBF = self.compute_average_uncertain_parameter_scenario(self.PatientDischargedPercentage, rounding='float')
             if self.AverageScenarioTree:
                 self.PatientDischargedPercentage = self.compute_average_uncertain_parameter_scenario(self.PatientDischargedPercentage, rounding='float')
 
 
-    def generate_uncertain_parameter_scenarios(self, param_dim, Avg, STD, rounding='int', non_negative=False, decimal_places = 3):
+    def generate_uncertain_parameter_scenarios(self, param_dim, Avg, STD, rounding='int', 
+                                               non_negative=False, decimal_places = 3,
+                                               Clustering = Constants.ClusteringMethod):
         """
         Generates uncertain parameter scenarios with flexibility to handle different dimensions.
 
@@ -101,7 +106,7 @@ class ScenarioTree:
         num_scenarios = self.TreeStructure[1]  # Final number of representative scenarios
 
         # If no clustering is selected, generate scenarios directly
-        if Constants.ClusteringMethod == 'NoC':
+        if Clustering == 'NoC':
             scenarios = self.generate_samples(
                 num_scenarios=num_scenarios,
                 param_dim=param_dim,
@@ -123,17 +128,17 @@ class ScenarioTree:
             ).reshape(num_original_scenarios, -1)  # Flatten each scenario for clustering
 
             # Step 2: Apply Clustering Based on User Selection
-            if Constants.ClusteringMethod == 'KMPP':  # K-Means++
+            if Clustering == 'KMPP':  # K-Means++
                 kmeans = KMeans(n_clusters=num_scenarios, init="k-means++", n_init=10, random_state=self.ScenarioSeed)
                 kmeans.fit(original_scenarios)
                 cluster_centers = kmeans.cluster_centers_
 
-            elif Constants.ClusteringMethod == 'KM':  # K-Means
+            elif Clustering == 'KM':  # K-Means
                 kmeans = KMeans(n_clusters=num_scenarios, init="random", n_init=10, random_state=self.ScenarioSeed)
                 kmeans.fit(original_scenarios)
                 cluster_centers = kmeans.cluster_centers_
 
-            elif Constants.ClusteringMethod == 'SOM':  # **Self-Organizing Map (SOM)**
+            elif Clustering == 'SOM':  # **Self-Organizing Map (SOM)**
                 np.random.seed(self.ScenarioSeed)  # Set the seed for reproducibility
 
                 # Step 2.1: Scale the features (SOM works better with normalized data)
@@ -166,7 +171,7 @@ class ScenarioTree:
                 selected_scenarios = selected_scenarios[:num_scenarios]
                 cluster_centers = original_scenarios[selected_scenarios]  # Use selected scenarios
             else:
-                raise ValueError(f"Unsupported clustering method: {Constants.ClusteringMethod}")
+                raise ValueError(f"Unsupported clustering method: {Clustering}")
 
             # Step 3: Assign the clustered parameters as final scenarios
             scenarios = cluster_centers  # Keep as float before rounding decision
@@ -338,6 +343,3 @@ class ScenarioTree:
             print("self.PatientDemand:\n" , self.PatientDemand)
             print("self.PatientDischargedPercentage:\n" , self.PatientDischargedPercentage)
             print("self.Probability:" , self.Probability)
-    
-
-
