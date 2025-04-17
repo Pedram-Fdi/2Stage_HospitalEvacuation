@@ -174,16 +174,14 @@ class ALNS:
         if Constants.Debug: 
             print("\n We are in 'ALNS' Class -- BuildMIPs2")
 
-        self.MIPSolver = MIPSolver(
-                                    instance=self.Instance,
+        self.MIPSolver = MIPSolver( instance=self.Instance,
                                     model=Constants.Two_Stage,
                                     scenariotree=self.ScenarioTree,
                                     nrscenario=self.TreeStructure[1],
                                     givenACFEstablishment = self.GivenACFEstablishment,
                                     givenNrLandRescueVehicle = self.GivenNrLandRescueVehicle,
                                     givenBackupHospital = self.GivenBackupHospital,                                    
-                                    logfile="NO"
-                                )
+                                    logfile="NO")
         self.MIPSolver.BuildModel()
 
     def GenerateScenarios(self, scenariotree=None):
@@ -192,12 +190,10 @@ class ALNS:
             print("\n We are in 'ALNS' Class -- GenerateScenarios")
 
         if scenariotree is None:
-            self.ScenarioTree = ScenarioTree(
-                instance=self.Instance,
-                tree_structure=self.TreeStructure,
-                scenario_seed=self.TestIdentifier.ScenarioSeed,
-                scenariogenerationmethod=self.TestIdentifier.ScenarioSampling
-            )
+            self.ScenarioTree = ScenarioTree(instance=self.Instance,
+                                            tree_structure=self.TreeStructure,
+                                            scenario_seed=self.TestIdentifier.ScenarioSeed,
+                                            scenariogenerationmethod=self.TestIdentifier.ScenarioSampling)
         else:
             self.ScenarioTree = scenariotree
 
@@ -803,7 +799,7 @@ class ALNS:
         # Step 2: Round relaxed solution to nearest integer (initial feasible solution)
         ACF_establishment_x_wi = relaxed_solution.ACFEstablishment_x_wi
         Rounded_ACFEstablishment_x_i = self.round_x_variable(ACF_establishment_x_wi[0])
-        if Constants.Debug:print("Rounded_ACFEstablishment_x_wi:\n", Rounded_ACFEstablishment_x_wi)
+        if Constants.Debug:print("Rounded_ACFEstablishment_x_wi:\n", Rounded_ACFEstablishment_x_i)
 
         landRescueVehicle_thetaVar_wim = relaxed_solution.LandRescueVehicle_thetaVar_wim
         Rounded_LandRescueVehicle_thetaVar_im = self.round_thetaVar_variable(Rounded_ACFEstablishment_x_i, landRescueVehicle_thetaVar_wim[0])
@@ -811,7 +807,7 @@ class ALNS:
 
         backupHospital_W_whhPrime = relaxed_solution.BackupHospital_W_whhPrime
         Rounded_BackupHospital_W_hhprime = self.round_w_variable(backupHospital_W_whhPrime[0])
-        if Constants.Debug:print("Rounded_BackupHospital_W_whhprime:\n", Rounded_BackupHospital_W_whhprime)
+        if Constants.Debug:print("Rounded_BackupHospital_W_whhprime:\n", Rounded_BackupHospital_W_hhprime)
 
         # Initialize empty lists for the 2D and 3D results
         Rounded_ACFEstablishment_x_wi = []

@@ -155,7 +155,7 @@ class Evaluator( object ):
 
         # Data for the "InSample" sheet
         # Ensure self.InSampleTestResult is structured correctly for DataFrame creation
-        insample_columns = ["GRB Cost", "GRB Time", "GRB Gap", "GRB Nr Constraints", "GRB Nr Variables", 
+        insample_columns = ["GRB Cost", "GRB Time", "GRB Gap(%)", "GRB Nr Constraints", "GRB Nr Variables", 
                             "PHA Cost", "PHA Nr Iteration", "Total Time", 
                             "ACF Establishment Cost", "Land Rescue Vehicle Assign. Cost", "Backup Hospital Cost", 
                             "Casualty Transfer Cost", "UnsatisfiedCasualties Cost", "DischargedPatients Cost",
@@ -168,7 +168,7 @@ class Evaluator( object ):
 
         # Data for the "OutOfSample" sheet
         # Ensure self.OutOfSampleTestResult is structured correctly for DataFrame creation
-        outofsample_columns = ["Mean", "LB", "UB", "MinAverage", "MaxAverage", "nrerror", "GRB Cost", "GRB Time", "GRB Gap", 
+        outofsample_columns = ["Mean", "LB", "UB", "MinAverage", "MaxAverage", "nrerror", "GRB Cost", "GRB Time", "GRB Gap(%)", 
                                 "GRB Nr Constraints", "GRB Nr Variables", "PHA Cost", "PHA Nr Iteration",
                                 "Total Time", 
                                 "ACF Establishment Cost", "Land Rescue Vehicle Assign. Cost", "Backup Hospital Cost", 

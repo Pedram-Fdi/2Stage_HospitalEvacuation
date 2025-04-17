@@ -68,17 +68,17 @@ def parseArguments():
 
         # Mandatory arguments
         parser.add_argument("--Action", help="Action to perform", type=str, choices=["GenerateInstances", "Solve"], default = "Solve")
-        parser.add_argument("--Instance", help="Instance name", type=str, default="4_10_5_10_3_1_CRP") 
+        parser.add_argument("--Instance", help="Instance name", type=str, default="3_5_3_4_3_1_CRP") 
         parser.add_argument("--Model", help="Stochastic model type", type=str, choices=["Average", "2Stage"], default = "2Stage")
         parser.add_argument("--Solver", help="Solver type", type=str, choices=["MIP", "ALNS", "PHA", "BBC"], default = "MIP")
-        parser.add_argument("--NrScenario", help="The number of scenarios used for optimization (all10 ...)", type=str, default = "50")
+        parser.add_argument("--NrScenario", help="The number of scenarios used for optimization (all10 ...)", type=str, default = "10")
         parser.add_argument("--PHAObj", help="Obj. function of PHA either Quadratic or Linear", type=str, choices=["Q", "L"], default = "Q")
         parser.add_argument("--PHAPenalty", help="Penalty Parameter (rho) in PHA, Static, Dynamic, dynamic Learning", type=str, choices=["S", "D", "DL"], default = "S")
         parser.add_argument("--ALNSRL", help="Whether we use RL in ALNS or not", type=int, choices=["0", "1"], default = 0)
         parser.add_argument("--ALNSRL_DeepQ", help="The type of RL we used in ALNS if (ALNSRL==1), Deep Q-Learning(1) or Q-Learning(0)", type=int, choices=["0", "1"], default = 0)
         parser.add_argument("-c", "--bbcsetting", help="Enhancements?", choices=["NE: NoEnhancement", "JM: JustMultiCut", "NM: NoMultiCut", "JS: JustStrongCut", "NS: NoStrongCut", "JW: JustWarmUp", "NW: NoWarmUp", "JL: JustLBF", "NL: NoLBF", "AE: AllEnhancement"], default="AE")
         parser.add_argument("--ScenarioGeneration", help="Which Type of Sampling?", type=str, choices=["MC","RQMC", "QMC"], default="RQMC")
-        parser.add_argument("-Cluster", "--ClusteringMethod", help="The method used for Clustering Scenarios?", type=str, choices=["NoC", "KM", "KMPP", "SOM"], default = "KMPP") 
+        parser.add_argument("-Cluster", "--ClusteringMethod", help="The method used for Clustering Scenarios? DB: Decisional-Based", type=str, choices=["NoC", "KM", "KMPP", "SOM", "DB"], default = "KMPP") 
 
 
 
@@ -121,17 +121,21 @@ def parseArguments():
     if args.Model == "Average" and not (args.Solver == "MIP"):
         print("Error: 'Average' model cannot be used with The type of Solver you selected (It is only compatible with MIP) to findout the value of considering uncertainty in the model!")
         sys.exit(1)  # Exit the program with an error status
-
+    # new check: forbid Average with DB clustering
+    if args.Model == "Average" and args.ClusteringMethod == "DB":
+        print("Error: 'Average' model cannot be used with DB (Decisional‑Based) clustering.")
+        sys.exit(1)
+        
 # Generate instances
 def generate_instances():
     print("Generating instances...")
 
-    for t in range(4, 7, 1):            ## Set it No more than 20 time periods!
-        for i in range(10, 21, 5):
-            for h in range(5, 6, 5):
-                for l in range(10, 21, 5):
+    for t in range(3, 4, 1):            ## Set it No more than 20 time periods!
+        for i in range(5, 6, 5):
+            for h in range(3, 4, 5):
+                for l in range(4, 5, 5):
                     for m in range(3, 4, 1):
-                        for instance_number in range(1, 4, 1):
+                        for instance_number in range(1, 2, 1):
                             instance_name = f"{t}_{i}_{h}_{l}_{m}_{instance_number}_CRP"
 
                             instance = Instance(instance_name)
@@ -161,8 +165,6 @@ def Solve(instance):
     global LastFoundSolution
     
     solver = Solver(instance, TestIdentifier)
-
-    
     solution = solver.Solve()
     
     LastFoundSolution = solution

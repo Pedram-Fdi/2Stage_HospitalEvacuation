@@ -5,6 +5,8 @@ from Constants import Constants
 from sklearn.cluster import KMeans
 from minisom import MiniSom
 from sklearn.preprocessing import MinMaxScaler
+import copy
+import pprint
 
 class ScenarioTree:
     
@@ -63,7 +65,8 @@ class ScenarioTree:
             self.HospitalDisruption = self.generate_uncertain_parameter_scenarios(param_dim = HospitalDisruption_param_dim, 
                                                                                   Avg = self.Instance.ForecastedAvgHospitalDisruption, 
                                                                                   STD = self.Instance.ForecastedSTDHospitalDisruption, 
-                                                                                  rounding='int', Clustering = 'NoC')   ## For Hospital Disruption, if we do not use clustering, we can cover a wider range of uncertain parameters!          
+                                                                                  rounding='int',
+                                                                                  Clustering = Constants.ClusteringMethod)          
             self.HospitalDisruption_LBF = self.compute_average_uncertain_parameter_scenario(self.HospitalDisruption, rounding='float')
             if self.AverageScenarioTree:
                 self.HospitalDisruption = self.compute_average_uncertain_parameter_scenario(self.HospitalDisruption, rounding='int')
@@ -90,7 +93,21 @@ class ScenarioTree:
             if self.AverageScenarioTree:
                 self.PatientDischargedPercentage = self.compute_average_uncertain_parameter_scenario(self.PatientDischargedPercentage, rounding='float')
 
-
+            if (Constants.Evaluation_Part == False) and (Constants.ClusteringMethod == 'DB'):
+                self.Scenario_DB = copy.copy(self)
+                selected_indices = self._decision_based_reduction(nrscenario, 
+                                                                    self.Scenario_DB,
+                                                                    self.CasualtyDemand,
+                                                                    self.HospitalDisruption,
+                                                                    self.PatientDemand,
+                                                                    self.PatientDischargedPercentage)
+                if(Constants.Debug):print("selected_indices: ", selected_indices)
+                ## Keeping only selected scenarios in the generated ones!
+                self.CasualtyDemand               = self.CasualtyDemand[selected_indices, ...]
+                self.HospitalDisruption           = self.HospitalDisruption[selected_indices, ...]
+                self.PatientDemand                = self.PatientDemand[selected_indices, ...]
+                self.PatientDischargedPercentage  = self.PatientDischargedPercentage[selected_indices, ...]
+                
     def generate_uncertain_parameter_scenarios(self, param_dim, Avg, STD, rounding='int', 
                                                non_negative=False, decimal_places = 3,
                                                Clustering = Constants.ClusteringMethod):
@@ -103,30 +120,33 @@ class ScenarioTree:
         :param decimal_places: int, number of decimal places for floating-point output (default=2).
         :return: Generated uncertain parameter scenarios in the given shape.
         """
-        num_scenarios = self.TreeStructure[1]  # Final number of representative scenarios
+
+        if Clustering != 'DB':
+            num_scenarios = self.TreeStructure[1]  # Final number of representative scenarios
+        else:
+            num_scenarios = Constants.Multiplier_NumberofOriginalScenarios * self.TreeStructure[1]
 
         # If no clustering is selected, generate scenarios directly
         if Clustering == 'NoC':
-            scenarios = self.generate_samples(
-                num_scenarios=num_scenarios,
-                param_dim=param_dim,
-                Average=Avg,
-                StandardDeviation=STD,
-                sampling_method=self.ScenarioGenerationMethod
-            )
-
+            scenarios = self.generate_samples(num_scenarios=num_scenarios,
+                                                param_dim=param_dim,
+                                                Average=Avg,
+                                                StandardDeviation=STD,
+                                                sampling_method=self.ScenarioGenerationMethod)
+        elif Clustering == 'DB':
+            scenarios = self.generate_samples(num_scenarios=num_scenarios,
+                                            param_dim=param_dim,
+                                            Average=Avg,
+                                            StandardDeviation=STD,
+                                            sampling_method=self.ScenarioGenerationMethod)                        
         else:  # If clustering is selected (K-Means, K-Means++, or SOM)
             num_original_scenarios = Constants.Multiplier_NumberofOriginalScenarios * num_scenarios
-
             # Step 1: Generate a large number of scenarios
-            original_scenarios = self.generate_samples(
-                num_scenarios=num_original_scenarios,
-                param_dim=param_dim,
-                Average=Avg,
-                StandardDeviation=STD,                
-                sampling_method=self.ScenarioGenerationMethod
-            ).reshape(num_original_scenarios, -1)  # Flatten each scenario for clustering
-
+            original_scenarios = self.generate_samples(num_scenarios=num_original_scenarios,
+                                                        param_dim=param_dim,
+                                                        Average=Avg,
+                                                        StandardDeviation=STD,                
+                                                        sampling_method=self.ScenarioGenerationMethod).reshape(num_original_scenarios, -1)  # Flatten each scenario for clustering
             # Step 2: Apply Clustering Based on User Selection
             if Clustering == 'KMPP':  # K-Means++
                 kmeans = KMeans(n_clusters=num_scenarios, init="k-means++", n_init=10, random_state=self.ScenarioSeed)
@@ -190,6 +210,104 @@ class ScenarioTree:
 
         # Step 5: Reshape `scenarios` to match the expected shape `param_dim`
         return scenarios.reshape(num_scenarios, *param_dim)
+
+
+    def _decision_based_reduction(self,
+                                nrscenario: int,
+                                tree_for_db,
+                                casualty_pool: np.ndarray,
+                                hospital_pool: np.ndarray,
+                                patient_pool: np.ndarray,
+                                discharged_pool: np.ndarray):
+        from MIPSolver import MIPSolver
+
+        ########### Start obtainng the Model Solutions for each Scenario
+        self.solutions_DB = []
+        N = casualty_pool.shape[0]   # e.g. 10
+        for i in range(N):
+            # 1) overwrite the tree’s attributes so it now holds *only* scenario i
+            tree_for_db.CasualtyDemand               = casualty_pool[i : i+1]
+            tree_for_db.HospitalDisruption           = hospital_pool[i : i+1]
+            tree_for_db.PatientDemand                = patient_pool[i : i+1]
+            tree_for_db.PatientDischargedPercentage  = discharged_pool[i : i+1]
+
+            # 2) solve exactly that single‐scenario tree
+            MIPSolver_DB = MIPSolver(instance = self.Instance,
+                                        model= Constants.Two_Stage,
+                                        scenariotree = tree_for_db,
+                                        nrscenario = 1,
+                                        linearRelaxation = True,
+                                        logfile = "NO")
+            MIPSolver_DB.BuildModel()
+            self.solutions_DB.append(MIPSolver_DB.Solve(True))
+
+        ########### Start evaluating the solution obtained by each scenario for other scenarios
+        self.eval_results = [[None]*N for _ in range(N)]
+        for i in range(N):
+            # 1) overwrite the tree’s attributes so it now holds *only* scenario i
+            for j in range(N):
+                if j != i:
+                    tree_for_db.CasualtyDemand               = casualty_pool[j : j+1]
+                    tree_for_db.HospitalDisruption           = hospital_pool[j : j+1]
+                    tree_for_db.PatientDemand                = patient_pool[j : j+1]
+                    tree_for_db.PatientDischargedPercentage  = discharged_pool[j : j+1]
+
+                    MIPSolver_Eval = MIPSolver( instance = self.Instance, 
+                                                model = Constants.Two_Stage, 
+                                                scenariotree = tree_for_db,
+                                                nrscenario = 1,
+                                                evaluatesolution=True,
+                                                givenACFEstablishment=self.solutions_DB[i].ACFEstablishment_x_wi,
+                                                givenNrLandRescueVehicle=self.solutions_DB[i].LandRescueVehicle_thetaVar_wim,
+                                                givenBackupHospital=self.solutions_DB[i].BackupHospital_W_whhPrime,
+                                                linearRelaxation = True)                       
+                    MIPSolver_Eval.BuildModel()
+                    Solution_Eval = MIPSolver_Eval.Solve(True)
+                    self.eval_results[i][j] = Solution_Eval.GRBCost
+
+        # Now build the dis‐similarity matrix
+        self.dissimilarity = [[None]*N for _ in range(N)]
+        for i in range(N):
+            for j in range(N):
+                # you may choose to leave D[i,i]=0 or np.nan
+                if i == j:
+                    self.dissimilarity[i][j] = 0
+                else:
+                    self.dissimilarity[i][j] = (self.eval_results[i][j] + self.eval_results[j][i])
+                    
+
+        # convert to NumPy array for ease of passing around
+        D = np.array(self.dissimilarity)
+
+        # now pick the k = nrscenario most‐dissimilar indices
+        selected_indices = self.select_maxmin(D, nrscenario)
+
+        # you can return them, or store them on self:
+        self.selected_scenarios = selected_indices
+        return selected_indices
+    
+    def select_maxmin(self, D: np.ndarray, k: int):
+        """
+        Greedy farthest‐point sampling: start with the pair (i,j) of largest D[i,j],
+        then iteratively add the point whose minimum distance to the existing set
+        is maximal.
+        """
+        N = D.shape[0]
+        # 1) find the pair (i,j) with maximum dissimilarity
+        i, j = np.unravel_index(np.argmax(D, axis=None), D.shape)
+        S = {i, j}
+
+        # 2) iteratively add the point farthest from current S
+        while len(S) < k:
+            remaining = list(set(range(N)) - S)
+            min_dists = {
+                l: min(D[l, s] for s in S)
+                for l in remaining
+            }
+            l_star = max(min_dists, key=min_dists.get)
+            S.add(l_star)
+
+        return sorted(S)
 
     def compute_average_uncertain_parameter_scenario(self, parameter, rounding='int'):
         """
@@ -276,7 +394,14 @@ class ScenarioTree:
             list: A list of Scenario objects with attributes copied from the ScenarioTree.
         """
         # Extract number of scenarios from the tree structure
-        num_scenarios = self.TreeStructure[1]
+
+        if (Constants.Evaluation_Part == False):
+            if hasattr(self.CasualtyDemand, 'shape'):
+                num_scenarios = self.CasualtyDemand.shape[0]
+            else:
+                num_scenarios = len(self.CasualtyDemand)            
+        else:
+            num_scenarios = self.TreeStructure[1]
 
         # Get all attributes of ScenarioTree except Demand
         scenario_tree_attributes = vars(self).copy()  # Get all attributes as a dictionary

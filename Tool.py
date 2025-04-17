@@ -103,3 +103,17 @@ class Tool:
                                     for i in range(dimension1)]
         
         return result  
+
+    @staticmethod
+    def round_nested_list(x):
+        """
+        Recursively walk through nested Python lists (of any depth) and round every numeric leaf to the nearest integer.
+        The structure and list types are preserved, and each leaf becomes a float (e.g. 5.0).
+        """
+        if isinstance(x, list):
+            for idx in range(len(x)):
+                x[idx] = Tool.round_nested_list(x[idx])
+            return x
+        else:
+            # Leaf node: assume it's a number, round and return as float
+            return float(round(x))

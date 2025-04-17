@@ -90,7 +90,7 @@ class Solution(object):
         # The objecie value as outputed by GRB,
         self.GRBCost = -1
         self.GRBGap = -1
-        self.GRBTime = 0
+        self.GRBTime = -1
         self.TotalTime = 0
         self.GRBNrConstraints = -1
         self.GRBNrVariables = -1
@@ -355,10 +355,10 @@ class Solution(object):
             "Distribution": self.Instance.Distribution,
             "Model": model,
             "GRBCost": round(self.GRBCost, 2),
-            "GRBTime_sec": self.GRBTime,
+            "GRBTime": self.GRBTime,
             "PHCost": self.PHCost,
             "PHNrIteration": self.PHNrIteration,
-            "TotalTime_sec": self.TotalTime,
+            "TotalTime": self.TotalTime,
             "GRBGap": self.GRBGap,
             "GRBNrConstraints": self.GRBNrConstraints,
             "GRBNrVariables": self.GRBNrVariables,
@@ -529,8 +529,8 @@ class Solution(object):
 
         self.IsPartialSolution = instanceinfo['IsPartialSolution'].iloc[0]
         self.GRBCost = instanceinfo['GRBCost'].iloc[0] 
-        self.GRBTime_sec = instanceinfo['GRBTime_sec'].iloc[0]  
-        self.TotalTime_sec = instanceinfo['TotalTime_sec'].iloc[0] 
+        self.GRBTime = instanceinfo['GRBTime'].iloc[0]  
+        self.TotalTime = instanceinfo['TotalTime'].iloc[0] 
         self.GRBGap = instanceinfo['GRBGap'].iloc[0]  
         self.GRBNrConstraints = instanceinfo['GRBNrConstraints'].iloc[0] 
         self.GRBNrVariables = instanceinfo['GRBNrVariables'].iloc[0] 
@@ -539,8 +539,8 @@ class Solution(object):
         
         if Constants.Debug:
             print(f"GRBCost: {self.GRBCost}")
-            print(f"GRBTime (sec): {self.GRBTime_sec}")
-            print(f"TotalTime (sec): {self.TotalTime_sec}")
+            print(f"GRBTime: {self.GRBTime}")
+            print(f"TotalTime: {self.TotalTime}")
             print(f"GRBGap: {self.GRBGap}")
             print(f"GRBNrConstraints: {self.GRBNrConstraints}")
             print(f"GRBNrVariables: {self.GRBNrVariables}")
@@ -899,6 +899,7 @@ class Solution(object):
 
     #This function compute some statistic on the current solution
     def ComputeStatistics(self):
+
         if Constants.Debug: print("\n We are in 'Solution' Class -- ComputeStatistics")
 
         ################ ACF Establishment
@@ -1230,7 +1231,7 @@ class Solution(object):
                     ]
 
         # Assuming 'column_names' is a list of strings representing the column names
-        column_names = ["GRB Cost", "GRB Time", "GRB Gap", "GRB Nr Constraints", "GRB Nr Variables",   
+        column_names = ["GRB Cost", "GRB Time", "GRB Gap (%)", "GRB Nr Constraints", "GRB Nr Variables",   
                         "PHA Cost", "PHA Nr Iteration", "Total Time", 
                         "ACF Establishment Cost", 
                         "Land Rescue Vehicle Assign. Cost", 

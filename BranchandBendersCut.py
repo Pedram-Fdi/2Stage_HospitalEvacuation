@@ -94,12 +94,10 @@ class BranchandBendersCut:
             print("\n We are in 'ALNS' Class -- GenerateScenarios")
 
         if scenariotree is None:
-            self.ScenarioTree = ScenarioTree(
-                instance=self.Instance,
-                tree_structure=self.TreeStructure,
-                scenario_seed=self.TestIdentifier.ScenarioSeed,
-                scenariogenerationmethod=self.TestIdentifier.ScenarioSampling
-            )
+            self.ScenarioTree = ScenarioTree(instance=self.Instance,
+                                            tree_structure=self.TreeStructure,
+                                            scenario_seed=self.TestIdentifier.ScenarioSeed,
+                                            scenariogenerationmethod=self.TestIdentifier.ScenarioSampling)
         else:
             self.ScenarioTree = scenariotree
         

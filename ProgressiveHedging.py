@@ -14,7 +14,8 @@ import os
 import numpy as np
 from collections import deque
 import random
-
+from types import SimpleNamespace
+from Tool import Tool
 
 # Define the directory path relative to the current script location
 directory = "./PH_Model_lp"
@@ -205,10 +206,10 @@ class ProgressiveHedging(object):
         # Build the scenario tree
         if Constants.Debug: print(self.TreeStructure)
         if scenariotree is None:
-            self.ScenarioTree = ScenarioTree(   instance=self.Instance,
-                                                tree_structure=self.TreeStructure,
-                                                scenario_seed=self.TestIdentifier.ScenarioSeed,
-                                                scenariogenerationmethod=self.TestIdentifier.ScenarioSampling)
+            self.ScenarioTree = ScenarioTree(instance=self.Instance,
+                                            tree_structure=self.TreeStructure,
+                                            scenario_seed=self.TestIdentifier.ScenarioSeed,
+                                            scenariogenerationmethod=self.TestIdentifier.ScenarioSampling)
         else:
             self.ScenarioTree = scenariotree
 
@@ -1246,7 +1247,13 @@ class ProgressiveHedging(object):
             self.SolveScenariosIndependently()
 
             # Create an implementable solution on the scenario tree
-            self.PreviousImplementableSolution = copy.deepcopy(self.CurrentImplementableSolution)
+            sol = self.CurrentImplementableSolution
+            if sol is not None:
+                self.PreviousImplementableSolution = SimpleNamespace(
+                    ACFEstablishment_x_wi         = sol.ACFEstablishment_x_wi.copy(),
+                    LandRescueVehicle_thetaVar_wim= sol.LandRescueVehicle_thetaVar_wim.copy(),
+                    BackupHospital_W_whhPrime     = sol.BackupHospital_W_whhPrime.copy(),)            
+                #self.PreviousImplementableSolution = copy.deepcopy(self.CurrentImplementableSolution)
 
             self.CurrentImplementableSolution = self.CreateImplementableSolution()
 
@@ -1308,6 +1315,12 @@ class ProgressiveHedging(object):
         self.CurrentImplementableSolution.PHNrIteration = self.CurrentIteration
         self.WriteInTraceFile("End of PH algorithm ------- Cost: %r ------------ Time (sec): %.2f" % (self.CurrentImplementableSolution.PHCost, self.duration))
         Constants.PrintOnlyFirstStageDecision = self.PrintOnlyFirstStagePreviousValue
+
+        # Round your three first‐stage variables to integers
+        Tool.round_nested_list(self.CurrentImplementableSolution.ACFEstablishment_x_wi)
+        Tool.round_nested_list(self.CurrentImplementableSolution.LandRescueVehicle_thetaVar_wim)
+        Tool.round_nested_list(self.CurrentImplementableSolution.BackupHospital_W_whhPrime)
+
 
         return self.CurrentImplementableSolution        
 

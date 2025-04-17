@@ -40,7 +40,7 @@ class Constants( object ):
     SeedArray = [42]#[2934, 875, 3545, 765, 546, 768, 242, 375, 142, 236, 788]
     EvaluationScenarioSeed = 3545
     
-    Debug = True
+    Debug = False
     Obtain_SecondStage_Solution  = True         # Do NOT CHANGE IT! I will use it when I am working on ALNS and wanna save time, avoiding generating ALNS solutions of the second-stage at each iteration!
     PrintSolutionFileToExcel = False            # (Defaul: False) If you set this 'True', then all final values of variables and objective function will be printed in Excel too.
     PrintSolutionFileToPickle = True            # (Defaul: True)
@@ -63,7 +63,7 @@ class Constants( object ):
 
     ####################### PHA Algorithm
     We_Are_in_PHA = False                            # Do NOT CHANGE IT!
-    PHIterationLimit = 100000                       # Previosly set to 10000
+    PHIterationLimit = 100                       # Previosly set to 10000
     PHConvergenceTolerence = 0.01        
     Rho_PH_PenaltyParameter= 0.01                    # The best: 0.1
     PHCoeeff_QuadraticPart = 0.5                     # (Do not Change it) (Usually you see (1/2) in mathematical models)
@@ -73,7 +73,7 @@ class Constants( object ):
     Quadratic_to_Linear_PHA = False                  # (Do not Change it) True: There is not Quadratic part in the Objective function of the PHA anymore based on: (A progressive hedging method for the optimization of social engagement and opportunistic IoT problems) article
 
     ####################### ALNS Algorithm
-    Max_ALNS_Iterations = 100000
+    Max_ALNS_Iterations = 10
 
     ####################### BBC Algorithm
     My_EpGap_BBC = 0.01

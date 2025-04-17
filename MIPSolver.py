@@ -23,6 +23,7 @@ class MIPSolver(object):
                  givenNrLandRescueVehicle = [],
                  givenBackupHospital = [],
                  evaluatesolution = False,
+                 linearRelaxation = False,
                  logfile=""):
         
         if Constants.Debug: print("\n We are in 'MIPSolver' Class -- Constructor")
@@ -201,6 +202,7 @@ class MIPSolver(object):
         self.BackupHospitalVarConstraintNR = []
 
         self.EvaluateSolution = evaluatesolution
+        self.LinearRelaxation = linearRelaxation
 
     # Compute the start of index and the number of variables for the considered instance
     def ComputeIndices(self):
@@ -678,31 +680,6 @@ class MIPSolver(object):
                     constraint_name = f"FacilityCapacity_w_{w}_t_{t}_i_{i}"
                     constraint = self.LocAloc.addConstr(LeftHandSide >= RightHandSide, name=constraint_name)
                     self.FacilityCapacityConstraintNR[w][t][i] = constraint
-
-    def CreateDemandFlowConstraint(self):
-        for w in self.ScenarioSet:
-            for t in self.Instance.TimeBucketSet:
-                for j in self.Instance.DemandSet:
-
-                    vars_y = [self.GetIndexProductionVariable(w, t, i, j) 
-                                for i in self.Instance.FacilitySet]
-                    coeff_y = [1.0  
-                                for i in self.Instance.FacilitySet]
-
-                    vars_z = [self.GetIndexShortageVariable(w, t, j)]
-                    coeff_z = [1.0]
-
-                    ############ Create the left-hand side of the constraint
-                    LeftHandSide_y = gp.quicksum(coeff_y[i] * self.Production_Var[vars_y[i]] for i in range(len(vars_y)))
-                    LeftHandSide_z = gp.quicksum(coeff_z[i] * self.Shortage_Var[vars_z[i]] for i in range(len(vars_z)))
-                    LeftHandSide = LeftHandSide_y + LeftHandSide_z
-                    
-                    ############ Define the right-hand side (RHS) of the constraint
-                    RightHandSide = self.DemandScenarioTree.Demand[w][t][j]  
-                    ############ Add the constraint to the model
-                    constraint_name = f"DemandFlow_w_{w}_t_{t}_j_{j}"
-                    constraint = self.LocAloc.addConstr(LeftHandSide == RightHandSide, name=constraint_name)
-                    self.DemandFlowConstraintNR[w][t][j] = constraint
 
     def CreateCasualtyAllocationConstraint(self):
         for w in self.ScenarioSet:
@@ -1345,9 +1322,15 @@ class MIPSolver(object):
                     vars_x = [self.GetIndexACFEstablishmentVariable(w, i)]
                     AlreadyAdded[indexinarray] = True
                     if isinstance(self.GivenACFEstablishment[0], list):  # 2D case
-                        righthandside = min(round(self.GivenACFEstablishment[w][i]), 1)
+                        if self.LinearRelaxation == True:
+                            righthandside = self.GivenACFEstablishment[w][i]
+                        else:
+                            righthandside = min(round(self.GivenACFEstablishment[w][i]), 1)
                     else:
-                        righthandside = min(round(self.GivenACFEstablishment[i]), 1)
+                        if self.LinearRelaxation == True:
+                            righthandside = self.GivenACFEstablishment[i]
+                        else:
+                            righthandside = min(round(self.GivenACFEstablishment[i]), 1)
                     # Add constraint
                     constraint_name = f"CopyGivenACFEstablishment_w_{w}_i_{i}"
                     if Constants.Debug: print(f"Adding constraint: {constraint_name} with RHS: {righthandside}")
@@ -1375,9 +1358,15 @@ class MIPSolver(object):
                         # Determine the right-hand side (RHS) value for 2D or 3D input
                         if isinstance(CheckGivenNrLandRescueVehicle, np.ndarray):
                             if CheckGivenNrLandRescueVehicle.ndim == 3:  # 3D case
-                                righthandside = round(self.GivenNrLandRescueVehicle[w][i][m])
+                                if self.LinearRelaxation == True:
+                                    righthandside = self.GivenNrLandRescueVehicle[w][i][m]
+                                else:
+                                    righthandside = round(self.GivenNrLandRescueVehicle[w][i][m])
                             elif CheckGivenNrLandRescueVehicle.ndim == 2:  # 2D case
-                                righthandside = round(self.GivenNrLandRescueVehicle[i][m])
+                                if self.LinearRelaxation == True:
+                                    righthandside = self.GivenNrLandRescueVehicle[i][m]
+                                else:
+                                    righthandside = round(self.GivenNrLandRescueVehicle[i][m])
                             else:
                                 raise ValueError("GivenNrLandRescueVehicle must be 2D or 3D.")
                         else:
@@ -1410,9 +1399,15 @@ class MIPSolver(object):
                         # Determine the right-hand side (RHS) value for 2D or 3D input
                         if isinstance(CheckGivenBackupHospital, np.ndarray):
                             if CheckGivenBackupHospital.ndim == 3:  # 3D case
-                                righthandside = round(self.GivenBackupHospital[w][h][hprime])
+                                if self.LinearRelaxation == True:
+                                    righthandside = self.GivenBackupHospital[w][h][hprime]
+                                else:
+                                    righthandside = round(self.GivenBackupHospital[w][h][hprime])
                             elif CheckGivenBackupHospital.ndim == 2:  # 2D case
-                                righthandside = round(self.GivenBackupHospital[h][hprime])
+                                if self.LinearRelaxation == True:
+                                    righthandside = self.GivenBackupHospital[h][hprime]
+                                else:
+                                    righthandside = round(self.GivenBackupHospital[h][hprime])
                             else:
                                 raise ValueError("GivenBackupHospital must be 2D or 3D.")
                         else:
@@ -1520,7 +1515,7 @@ class MIPSolver(object):
                 acfestablishmentcost[Index_Cost] = self.GetACFestablishmentCoeff_Obj(i)
                 Index_Var = self.GetIndexACFEstablishmentVariable(w, i)
                 var_name = f"x_w_{w}_i_{i}_index_{Index_Var}"
-                if self.EvaluateSolution:
+                if self.EvaluateSolution or self.LinearRelaxation:
                     self.ACFEstablishment_Var[Index_Var] = self.LocAloc.addVar(vtype=GRB.CONTINUOUS, obj = acfestablishmentcost[Index_Cost], lb=0, ub=1, name=var_name)
                 else:
                     self.ACFEstablishment_Var[Index_Var] = self.LocAloc.addVar(vtype=GRB.BINARY, obj = acfestablishmentcost[Index_Cost], lb=0, ub=1, name=var_name)
@@ -1556,7 +1551,7 @@ class MIPSolver(object):
                     landRescueVehiclecost[Index_Cost] = self.GetlandRescueVehicleCoeff(i, m)
                     Index_Var = self.GetIndexLandRescueVehicleVariable(w, i, m)
                     var_name = f"thetaVar_w_{w}_i_{i}_m_{m}_index_{Index_Var}"
-                    if self.EvaluateSolution:
+                    if self.EvaluateSolution or self.LinearRelaxation:
                         self.LandRescueVehicle_Var[Index_Var] = self.LocAloc.addVar(vtype=GRB.CONTINUOUS, obj = landRescueVehiclecost[Index_Cost], lb=0, ub=GRB.INFINITY, name=var_name)
                     else:
                         self.LandRescueVehicle_Var[Index_Var] = self.LocAloc.addVar(vtype=GRB.INTEGER, obj = landRescueVehiclecost[Index_Cost], lb=0, ub=GRB.INFINITY, name=var_name)
@@ -1595,7 +1590,7 @@ class MIPSolver(object):
                     Index_Var = self.GetIndexBackupHospitalVariable(w, h, hprime)
                     var_name = f"W_w_{w}_h_{h}_h'_{hprime}_index_{Index_Var}"
 
-                    if self.EvaluateSolution:
+                    if self.EvaluateSolution or self.LinearRelaxation:
                         self.BackupHospital_Var[Index_Var] = self.LocAloc.addVar(vtype=GRB.CONTINUOUS, obj=backupHospitalcost[Index_Cost], lb=0, ub=1, name=var_name)
                     else:
                         self.BackupHospital_Var[Index_Var] = self.LocAloc.addVar(vtype=GRB.BINARY, obj=backupHospitalcost[Index_Cost], lb=0, ub=1, name=var_name)
@@ -1905,6 +1900,14 @@ class MIPSolver(object):
         #sol includes objective function and variables' values
         sol = self.Check_Optimality_and_Print_Solutions()
 
+        # after optimize()
+        gurobi_runtime = self.LocAloc.Runtime        # total seconds Gurobi actually spent
+
+        if self.LocAloc.IsMIP:
+            self.gurobi_gap = self.LocAloc.MIPGap * 100
+        else:
+            self.gurobi_gap = 0.0
+
         if self.LocAloc.status == GRB.OPTIMAL:
             if Constants.Debug:
                 print("GRB Solve Time(s): %r   GRB build time(s): %s   cost: %s" % (solvetime, buildtime, sol['objective_value']))
@@ -2160,7 +2163,7 @@ class MIPSolver(object):
         if Constants.Debug: print("------------Moving BACK from 'Solution' class (Constructor) to 'MIPSolver' Class ('CreateCRPSolution' Function))---------------")
         
         solution.GRBCost = objvalue
-        solution.GRBGap = 0
+        solution.GRBGap = round(self.gurobi_gap,3)
         solution.GRBNrVariables = nrvariable
         solution.GRBNrConstraints = nrconstraints
         solution.GRBTime = solvetime
