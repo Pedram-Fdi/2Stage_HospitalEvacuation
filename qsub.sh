@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=def-sehasd
 #SBATCH --time=14:00:00       # Specify time directly
-#SBATCH --mem=20GB            # Specify memory directly
+#SBATCH --mem=25GB            # Specify memory directly
 #SBATCH --output=/home/pfarghad/Myschedulingmodel_3/RL/JobOutputs/%x-%j.out
 #SBATCH --error=/home/pfarghad/Myschedulingmodel_3/RL/JobOutputs/%x-%j.err
 

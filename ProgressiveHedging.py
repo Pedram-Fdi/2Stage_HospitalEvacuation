@@ -1321,9 +1321,7 @@ class ProgressiveHedging(object):
         Tool.round_nested_list(self.CurrentImplementableSolution.LandRescueVehicle_thetaVar_wim)
         Tool.round_nested_list(self.CurrentImplementableSolution.BackupHospital_W_whhPrime)
 
-
-        return self.CurrentImplementableSolution        
-
+        return self.CurrentImplementableSolution
 
     def Check_ACF_Establishment_Budget_Constraint(self, x_var_i, Rounded_x_var_row, RandomRemoval=False):
         """

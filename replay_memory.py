@@ -57,4 +57,3 @@ class ReplayMemoryDataset(torch.utils.data.Dataset):
                 torch.FloatTensor([reward]),
                 torch.FloatTensor(next_state),
                 torch.FloatTensor([done]))
-

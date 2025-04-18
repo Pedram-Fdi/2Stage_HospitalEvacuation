@@ -681,5 +681,4 @@ class BranchandBendersCut:
             self.MasterModel.ObjVal, final_gap_LB, final_gap_UB, total_time)
         self.WriteInTraceFile(final_trace_str)
 
-
         return Final_solution

@@ -51,7 +51,7 @@ class Constants( object ):
     LauchEvalAfterSolve = True 
     Debug_lp_Files = False
     PrintSolutionFileInTMP = False
-    Evaluation_Part = False
+    Evaluation_Part = False                     # Do NOT Change it!
 
     #Code parameter
     Infinity = 9999999999999999
@@ -63,7 +63,7 @@ class Constants( object ):
 
     ####################### PHA Algorithm
     We_Are_in_PHA = False                            # Do NOT CHANGE IT!
-    PHIterationLimit = 100                       # Previosly set to 10000
+    PHIterationLimit = 10000                       # Previosly set to 10000
     PHConvergenceTolerence = 0.01        
     Rho_PH_PenaltyParameter= 0.01                    # The best: 0.1
     PHCoeeff_QuadraticPart = 0.5                     # (Do not Change it) (Usually you see (1/2) in mathematical models)
@@ -73,7 +73,7 @@ class Constants( object ):
     Quadratic_to_Linear_PHA = False                  # (Do not Change it) True: There is not Quadratic part in the Objective function of the PHA anymore based on: (A progressive hedging method for the optimization of social engagement and opportunistic IoT problems) article
 
     ####################### ALNS Algorithm
-    Max_ALNS_Iterations = 10
+    Max_ALNS_Iterations = 10000
 
     ####################### BBC Algorithm
     My_EpGap_BBC = 0.01
@@ -87,7 +87,7 @@ class Constants( object ):
 
     ####################### Scenario Clustering
     ClusteringMethod = "NoC"                    # Do NOT CHANGE IT
-    Multiplier_NumberofOriginalScenarios = 10   # If you set it to 10, and then choose any type of scenario clustering, then the model cluseter "NrScenario" scenairos from "10 * NrScenario" scenarios!
+    Multiplier_NumberofOriginalScenarios = 2   # If you set it to 10, and then choose any type of scenario clustering, then the model cluseter "NrScenario" scenairos from "10 * NrScenario" scenarios!
 
     @staticmethod
     def IsDeterministic(s):

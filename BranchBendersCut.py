@@ -239,4 +239,3 @@ for p in Fset:
 for k in Sset:
     print('theta[', k, ']=', theta[k].x)
 print('objval = ', main.objVal)
-

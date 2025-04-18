@@ -11,12 +11,12 @@ MODEL="2Stage"    # Options: "Average" or "2Stage"
 BBC_SETTING="NS"  # Use the appropriate value
 
 # Independent arrays:
-NR_SCENARIOS=("50" "100" "200" "500")
+NR_SCENARIOS=("250")
 SCENARIO_GENERATION=("RQMC")          # Options: "MC", "RQMC", "QMC"
-CLUSTER_METHODS=("NoC")               # Options: "NoC", "KM", "KMPP", "SOM"
+CLUSTER_METHODS=("KM" "SOM")               # Options: "NoC", "KM", "KMPP", "SOM"
 
 # Array for SOLVERS to loop over:
-SOLVERS=("MIP" "ALNS" "PHA")
+SOLVERS=("ALNS")
 
 for SOLVER in "${SOLVERS[@]}"; do
   # Set parameter arrays based on the current solver:
@@ -33,8 +33,8 @@ for SOLVER in "${SOLVERS[@]}"; do
   elif [ "$SOLVER" = "PHA" ]; then
     ALNSRLs=(0)
     ALNSRL_DEEPQs=(0)
-    PHA_OBJS=("Q" "L")
-    PHAPenalties=("S" "D" "DL")
+    PHA_OBJS=("Q")
+    PHAPenalties=("S" "DL")
   fi
 
   for NR_SCENARIO in "${NR_SCENARIOS[@]}"; do
@@ -52,17 +52,17 @@ for SOLVER in "${SOLVERS[@]}"; do
 
           for ALNSRL_DEEPQ in "${ALNSRL_DEEPQs[@]}"; do
             # Loop over instance parameters:
-            for ARG1 in 5 6; 
+            for ARG1 in 6; 
             do
-              for ARG2 in 10 15; 
+              for ARG2 in 10 20; 
               do
                 for ARG3 in 5; 
                 do
-                  for ARG4 in 10 15; 
+                  for ARG4 in 10 20; 
                   do
                     for ARG5 in 3; 
                     do
-                      for ARG6 in 1 2 3; 
+                      for ARG6 in 2 3; 
                       do
                         INSTANCE_NAME="${ARG1}_${ARG2}_${ARG3}_${ARG4}_${ARG5}_${ARG6}_CRP"
                         echo "Submitting job for instance ${INSTANCE_NAME} with: SOLVER=${SOLVER}, NR_SCENARIO=${NR_SCENARIO}, PHA_OBJ=${PHA_OBJ}, PHAPenalty=${PHAPenalty}, ALNSRL=${ALNSRL}, ALNSRL_DEEPQ=${ALNSRL_DEEPQ}"

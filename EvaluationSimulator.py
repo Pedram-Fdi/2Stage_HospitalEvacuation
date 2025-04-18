@@ -333,7 +333,5 @@ class EvaluationSimulator(object):
 
                 scenarioset.append(scenario)
                 treeset.append(scenariotree)
-
-
+                
         return scenarioset, treeset
-

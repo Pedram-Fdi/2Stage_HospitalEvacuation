@@ -234,4 +234,4 @@ class Solver(object):
 
         solution = mipsolver.Solve()
 
-        return solution, mipsolver    
+        return solution, mipsolver

@@ -255,5 +255,3 @@ class Evaluator( object ):
         else:
             self.InSampleTestResult = self.ComputeInSampleStatistis()
             self.PrintFinalResult()
-
-

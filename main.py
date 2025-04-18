@@ -68,7 +68,7 @@ def parseArguments():
 
         # Mandatory arguments
         parser.add_argument("--Action", help="Action to perform", type=str, choices=["GenerateInstances", "Solve"], default = "Solve")
-        parser.add_argument("--Instance", help="Instance name", type=str, default="3_5_3_4_3_1_CRP") 
+        parser.add_argument("--Instance", help="Instance name", type=str, default="4_10_5_10_3_1_CRP") 
         parser.add_argument("--Model", help="Stochastic model type", type=str, choices=["Average", "2Stage"], default = "2Stage")
         parser.add_argument("--Solver", help="Solver type", type=str, choices=["MIP", "ALNS", "PHA", "BBC"], default = "MIP")
         parser.add_argument("--NrScenario", help="The number of scenarios used for optimization (all10 ...)", type=str, default = "10")
@@ -78,7 +78,7 @@ def parseArguments():
         parser.add_argument("--ALNSRL_DeepQ", help="The type of RL we used in ALNS if (ALNSRL==1), Deep Q-Learning(1) or Q-Learning(0)", type=int, choices=["0", "1"], default = 0)
         parser.add_argument("-c", "--bbcsetting", help="Enhancements?", choices=["NE: NoEnhancement", "JM: JustMultiCut", "NM: NoMultiCut", "JS: JustStrongCut", "NS: NoStrongCut", "JW: JustWarmUp", "NW: NoWarmUp", "JL: JustLBF", "NL: NoLBF", "AE: AllEnhancement"], default="AE")
         parser.add_argument("--ScenarioGeneration", help="Which Type of Sampling?", type=str, choices=["MC","RQMC", "QMC"], default="RQMC")
-        parser.add_argument("-Cluster", "--ClusteringMethod", help="The method used for Clustering Scenarios? DB: Decisional-Based", type=str, choices=["NoC", "KM", "KMPP", "SOM", "DB"], default = "KMPP") 
+        parser.add_argument("-Cluster", "--ClusteringMethod", help="The method used for Clustering Scenarios? DB: Decisional-Based", type=str, choices=["NoC", "KM", "KMPP", "SOM", "DB"], default = "DB") 
 
 
 

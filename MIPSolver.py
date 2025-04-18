@@ -2613,4 +2613,4 @@ class MIPSolver(object):
                     variable_to_update.setAttr(GRB.Attr.VType, GRB.CONTINUOUS)
                     variable_to_update.setAttr(GRB.Attr.LB, 0.0)
                     variable_to_update.setAttr(GRB.Attr.UB, 1.0)
-                    self.LocAloc.update()          
+                    self.LocAloc.update()

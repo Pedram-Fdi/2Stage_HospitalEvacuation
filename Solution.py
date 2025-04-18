@@ -1438,4 +1438,3 @@ class Solution(object):
 
         self.AvailableCapFacility_zeta_wtu = self.AvailableCapFacility_zeta_wtu + solution2.AvailableCapFacility_zeta_wtu
         if Constants.Debug: print("self.AvailableCapFacility_zeta_wtu:\n ", self.AvailableCapFacility_zeta_wtu)
-

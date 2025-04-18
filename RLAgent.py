@@ -55,4 +55,3 @@ class RLAgent:
             action = np.random.choice(range(self.num_actions), p=probabilities)
             print("Action (Softmax):", action)
             return action
-
