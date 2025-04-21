@@ -52,13 +52,18 @@ class Constants( object ):
     Debug_lp_Files = False
     PrintSolutionFileInTMP = False
     Evaluation_Part = False                     # Do NOT Change it!
+    
+    ## Scenario Clustering
+    Multiplier_NumberofOriginalScenarios = 2   # If you set it to 10, and then choose any type of scenario clustering, then the model cluseter "NrScenario" scenairos from "10 * NrScenario" scenarios!
+    KeepSomeRandomScenarioInDBClustering = False               ## If you set it to true, the following line will be activated!
+    MaxNrScenariosInThePoolOfDBClustering = 100   # If (KeepSomeRandomScenarioInDBClustering == True), then "Y= (MaxNrScenariosInThePoolOfDBClustering/Multiplier_NumberofOriginalScenarios)" number of scenarios is generated and kept using DB clustering and "nrscenario - Y" are kept randomly! (Set No More than 100, because of computational Issues!)
 
     #Code parameter
     Infinity = 9999999999999999
-    AlgorithmTimeLimit = 12 * 3600     #Whatever you have here, then in the SDDP algorithm, (AlgorithmTimeLimit * |T|) will be used as time limit.
+    AlgorithmTimeLimit = 1 * 3600     #Whatever you have here, then in the SDDP algorithm, (AlgorithmTimeLimit * |T|) will be used as time limit.
     
     
-    MIPTimeLimit = 12 * 3600            #This is only a time limit to solve the extended model via MIP.
+    MIPTimeLimit = 10 * 3600            #This is only a time limit to solve the extended model via MIP.
     ModelOutputFlag = 0                 #If it is 0, Prevents Gurobi from showing the optimization process!
 
     ####################### PHA Algorithm
@@ -74,7 +79,9 @@ class Constants( object ):
 
     ####################### ALNS Algorithm
     Max_ALNS_Iterations = 10000
-
+    max_no_improv = 100                     ## If after "max_no_improv" iteration, the global best objective has not changed, we stop it!
+    RandomALNSInitilization = False
+    
     ####################### BBC Algorithm
     My_EpGap_BBC = 0.01
     UseMultiCut = False                  # Do NOt Change!
@@ -87,7 +94,6 @@ class Constants( object ):
 
     ####################### Scenario Clustering
     ClusteringMethod = "NoC"                    # Do NOT CHANGE IT
-    Multiplier_NumberofOriginalScenarios = 2   # If you set it to 10, and then choose any type of scenario clustering, then the model cluseter "NrScenario" scenairos from "10 * NrScenario" scenarios!
 
     @staticmethod
     def IsDeterministic(s):
@@ -104,4 +110,4 @@ class Constants( object ):
         if Constants.PrintSolutionFileInTMP:
             return "/tmp/Evaluations/"
         else:
-            return "./Evaluations/"    
+            return "./Evaluations/"

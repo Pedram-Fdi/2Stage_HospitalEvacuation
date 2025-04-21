@@ -11,7 +11,6 @@ from Tool import Tool
 from Solution import Solution
 from ScenarioTree import ScenarioTree
 
-
 class MIPSolver(object):
     # constructor
     def __init__(self,

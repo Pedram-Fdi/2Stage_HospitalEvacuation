@@ -12,8 +12,6 @@ import numpy as np
 import pandas as pd
 from Scenario import Scenario
 from TestIdentificator import TestIdentificator
-#from matplotlib import pyplot as plt
-
 
 #This class define a solution to MRP
 class Solution(object):

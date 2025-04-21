@@ -62,13 +62,13 @@ def parseArguments():
         parser.add_argument("--ALNSRL_DeepQ", help="The type of RL we used in ALNS if (ALNSRL==1), Deep Q-Learning(1) or Q-Learning(0)", type=int, choices=[0, 1], required=True)        
         parser.add_argument("-c", "--bbcsetting", help="Enhancements?", choices=["NE", "JM", "NM", "JS", "NS", "JW", "NW", "JL", "NL", "AE"], required=True)
         parser.add_argument("--ScenarioGeneration", help="Which Type of Sampling?", type=str, choices=["MC","RQMC", "QMC"], required=True)
-        parser.add_argument("-Cluster", "--ClusteringMethod", help="The method used for Clustering Scenarios?", type=str, choices=["NoC", "KM", "KMPP", "SOM"], required=True) 
+        parser.add_argument("-Cluster", "--ClusteringMethod", help="The method used for Clustering Scenarios?", type=str, choices=["NoC", "KM", "KMPP", "SOM", "DB"], required=True) 
 
     else:
 
         # Mandatory arguments
         parser.add_argument("--Action", help="Action to perform", type=str, choices=["GenerateInstances", "Solve"], default = "Solve")
-        parser.add_argument("--Instance", help="Instance name", type=str, default="4_10_5_10_3_1_CRP") 
+        parser.add_argument("--Instance", help="Instance name", type=str, default="3_5_3_4_3_1_CRP") 
         parser.add_argument("--Model", help="Stochastic model type", type=str, choices=["Average", "2Stage"], default = "2Stage")
         parser.add_argument("--Solver", help="Solver type", type=str, choices=["MIP", "ALNS", "PHA", "BBC"], default = "MIP")
         parser.add_argument("--NrScenario", help="The number of scenarios used for optimization (all10 ...)", type=str, default = "10")

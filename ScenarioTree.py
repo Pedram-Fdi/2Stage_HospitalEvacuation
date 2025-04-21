@@ -7,6 +7,8 @@ from minisom import MiniSom
 from sklearn.preprocessing import MinMaxScaler
 import copy
 import pprint
+import time
+import random
 
 class ScenarioTree:
     
@@ -94,6 +96,7 @@ class ScenarioTree:
                 self.PatientDischargedPercentage = self.compute_average_uncertain_parameter_scenario(self.PatientDischargedPercentage, rounding='float')
 
             if (Constants.Evaluation_Part == False) and (Constants.ClusteringMethod == 'DB'):
+                start = time.time()
                 self.Scenario_DB = copy.copy(self)
                 selected_indices = self._decision_based_reduction(nrscenario, 
                                                                     self.Scenario_DB,
@@ -102,12 +105,28 @@ class ScenarioTree:
                                                                     self.PatientDemand,
                                                                     self.PatientDischargedPercentage)
                 if(Constants.Debug):print("selected_indices: ", selected_indices)
-                ## Keeping only selected scenarios in the generated ones!
-                self.CasualtyDemand               = self.CasualtyDemand[selected_indices, ...]
-                self.HospitalDisruption           = self.HospitalDisruption[selected_indices, ...]
-                self.PatientDemand                = self.PatientDemand[selected_indices, ...]
-                self.PatientDischargedPercentage  = self.PatientDischargedPercentage[selected_indices, ...]
+                # if requested, keep some random others to reach nrscenario total
+                if Constants.KeepSomeRandomScenarioInDBClustering:
+                    random.seed(self.ScenarioSeed)
+                    total = list(range(self.CasualtyDemand.shape[0]))
+                    remaining = [i for i in total if i not in selected_indices]
+                    extra_needed = max(nrscenario - len(selected_indices), 0)
+                    random_add = random.sample(remaining, min(extra_needed, len(remaining)))
+                    final_indices = selected_indices + random_add
+                    if Constants.Debug:
+                        print(f"Adding {len(random_add)} random indices: {random_add}")
+                else:
+                    final_indices = selected_indices
+
+                # now slice everything by final_indices
+                self.CasualtyDemand              = self.CasualtyDemand[final_indices, ...]
+                self.HospitalDisruption          = self.HospitalDisruption[final_indices, ...]
+                self.PatientDemand               = self.PatientDemand[final_indices, ...]
+                self.PatientDischargedPercentage = self.PatientDischargedPercentage[final_indices, ...]
                 
+                elapsed = time.time() - start
+                print(f"------------------ DB reduction took {elapsed:.2f} seconds -----------------")
+
     def generate_uncertain_parameter_scenarios(self, param_dim, Avg, STD, rounding='int', 
                                                non_negative=False, decimal_places = 3,
                                                Clustering = Constants.ClusteringMethod):
@@ -212,18 +231,17 @@ class ScenarioTree:
         return scenarios.reshape(num_scenarios, *param_dim)
 
 
-    def _decision_based_reduction(self,
-                                nrscenario: int,
-                                tree_for_db,
-                                casualty_pool: np.ndarray,
-                                hospital_pool: np.ndarray,
-                                patient_pool: np.ndarray,
-                                discharged_pool: np.ndarray):
+    def _decision_based_reduction(self, nrscenario, tree_for_db, casualty_pool, hospital_pool, patient_pool, discharged_pool):
+        
         from MIPSolver import MIPSolver
 
         ########### Start obtainng the Model Solutions for each Scenario
         self.solutions_DB = []
-        N = casualty_pool.shape[0]   # e.g. 10
+        if Constants.KeepSomeRandomScenarioInDBClustering:
+            N = min(casualty_pool.shape[0], Constants.MaxNrScenariosInThePoolOfDBClustering)
+        else:
+            N = casualty_pool.shape[0]
+
         for i in range(N):
             # 1) overwrite the tree’s attributes so it now holds *only* scenario i
             tree_for_db.CasualtyDemand               = casualty_pool[i : i+1]
@@ -280,7 +298,11 @@ class ScenarioTree:
         D = np.array(self.dissimilarity)
 
         # now pick the k = nrscenario most‐dissimilar indices
-        selected_indices = self.select_maxmin(D, nrscenario)
+        if Constants.KeepSomeRandomScenarioInDBClustering: 
+            ## In this case, we also keep some random scenarios in the future steps!
+            selected_indices = self.select_maxmin(D, min(nrscenario, Constants.MaxNrScenariosInThePoolOfDBClustering/Constants.Multiplier_NumberofOriginalScenarios))
+        else:
+            selected_indices = self.select_maxmin(D, nrscenario)
 
         # you can return them, or store them on self:
         self.selected_scenarios = selected_indices

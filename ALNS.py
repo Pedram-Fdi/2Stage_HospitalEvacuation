@@ -571,6 +571,71 @@ class ALNS:
 
         return thetaVar_solution
 
+    def Apply_Action_on_w(self, w_solution, binary_destroy_action, binary_repair_action, num_changes):
+        """
+        Apply the selected destroy and repair operators to the binary variable x_solution.
+        """
+
+        # --- Destroy phase ---
+        if binary_destroy_action == "Remove":
+            ones_indices = [(h, hprime)
+                            for h in range(len(w_solution[0]))              # i over first dimension
+                            for hprime in range(len(w_solution[0][h]))          # m over second dimension
+                            if w_solution[0][h][hprime] == 1]
+            if ones_indices:
+                # pick up to num_changes of those (i,m) pairs
+                to_change = random.sample(ones_indices, min(len(ones_indices), num_changes))
+                for h, hprime in to_change:
+                    for w in self.scenario_set:
+                        w_solution[w][h][hprime] = 0
+        else:
+            # "NoDestroy": do nothing.
+            pass
+
+        # --- Repair phase ---
+        if binary_repair_action == "Add":
+            # Collect all (h,hprime) pairs where in scenario 0 the entry is 0
+            zeros_indices = [(h, hprime)
+                            for h in range(len(w_solution[0]))
+                            for hprime in range(len(w_solution[0][h]))
+                            if w_solution[0][h][hprime] == 0]
+            if zeros_indices:
+                to_change = random.sample(zeros_indices, min(len(zeros_indices), num_changes))
+                for h, hprime in to_change:
+                    for w in self.scenario_set:
+                        w_solution[w][h][hprime] = 1
+
+        elif binary_repair_action == "Swap":
+            # Find all ones and zeros in the base slice
+            ones_indices = [(h, hprime)
+                            for h in range(len(w_solution[0]))
+                            for hprime in range(len(w_solution[0][h]))
+                            if w_solution[0][h][hprime] == 1]
+            zeros_indices = [(h, hprime)
+                            for h in range(len(w_solution[0]))
+                            for hprime in range(len(w_solution[0][h]))
+                            if w_solution[0][h][hprime] == 0]
+
+            num_swaps = min(len(ones_indices), len(zeros_indices), num_changes)
+            if num_swaps > 0:
+                swap_ones = random.sample(ones_indices, num_swaps)
+                swap_zeros = random.sample(zeros_indices, num_swaps)
+                for w in self.scenario_set:
+                    for h, hprime in swap_ones:
+                        w_solution[w][h][hprime] = 0
+                    for h, hprime in swap_zeros:
+                        w_solution[w][h][hprime] = 1
+
+        # --- (Optional) re‑enforce feasibility by rounding your base slice and replicating ---
+        w_base = self.round_w_variable(w_solution[0])
+        for h in range(len(w_base)):
+            w_base[h][h] = 0        
+        w_solution = [[row[:] for row in w_base] for _ in self.scenario_set]
+
+        if Constants.Debug: print("Modified w_solution:", w_solution)
+        
+        return w_solution
+    
     def Apply_Action(self, x_solution, thetaVar_solution, w_solution, binary_destroy_action, binary_repair_action, integer_destroy_action, integer_repair_action, num_changes):
         """
         Apply the selected destroy and repair operators to the current solution for all variables.
@@ -583,7 +648,8 @@ class ALNS:
         thetaVar_solution = self.Apply_Action_on_thetaVar(x_solution, thetaVar_solution, integer_destroy_action, integer_repair_action, num_changes)
         
         # Apply actions to the binary variable w (we will define this in the next message)
-        # w_solution = self.Apply_Action_on_w(w_solution, binary_destroy_action, binary_repair_action, num_changes)
+        if Constants.RandomALNSInitilization:
+            w_solution = self.Apply_Action_on_w(w_solution, binary_destroy_action, binary_repair_action, num_changes)
         
         return x_solution, thetaVar_solution, w_solution
 
@@ -782,6 +848,45 @@ class ALNS:
         
         return Rounded_w_hhprime
 
+    def random_initial_solution(self):
+        rng = random.Random(self.TestIdentifier.ScenarioSeed)
+        # Dimensions
+        num_scenario = self.TreeStructure[1]
+        num_acf      = self.Instance.NrACFs
+        num_res      = self.Instance.NrRescueVehicles
+        num_hosp     = self.Instance.NrHospitals
+
+        # --- initialize raw arrays with zeros ---
+        raw_x0     = [0] * num_acf
+        raw_theta0 = [[0] * num_res for _ in range(num_acf)]
+        raw_w0     = [[0] * num_hosp for _ in range(num_hosp)]
+
+        # 1) One raw x-vector (length = num_acf), binary {0,1}
+        for i in self.Instance.ACFSet:
+            raw_x0[i] = rng.randint(0, 1)
+
+        # 2) One raw theta-matrix (num_acf × num_res), integer [0…capacity//5]
+        for i in self.Instance.ACFSet:
+            if raw_x0[i] == 1:
+                # integer division to keep max_v an int
+                for m in self.Instance.RescueVehicleSet:
+                    max_v = self.Instance.Number_Rescue_Vehicle_ACF[m]
+                    raw_theta0[i][m] = rng.randint(0, max_v)
+            # else leave the row as zeros
+
+        # 3) One raw w-matrix (num_hosp × num_hosp), binary {0,1}
+        for h in self.Instance.HospitalSet:
+            for hprime in self.Instance.HospitalSet:
+                if h != hprime:
+                    raw_w0[h][hprime] = rng.randint(0, 1)
+
+        # --- replicate into each scenario ---
+        Rounded_ACFEstablishment_x_wi = [raw_x0[:] for _ in range(num_scenario)]
+        Rounded_LandRescueVehicle_thetaVar_wim = [[row[:] for row in raw_theta0] for _ in range(num_scenario)]
+        Rounded_BackupHospital_W_whhprime = [[row[:] for row in raw_w0] for _ in range(num_scenario)]
+
+        return Rounded_ACFEstablishment_x_wi, Rounded_LandRescueVehicle_thetaVar_wim, Rounded_BackupHospital_W_whhprime
+
     def Run(self):
         # To prevent obtaining the second-stage variables' values at every iteratrion of the ALNS
         Constants.Obtain_SecondStage_Solution = False        
@@ -789,25 +894,40 @@ class ALNS:
         self.InitTrace()
         print("\nStarting ALNS...")
 
-        # Step 1: Solve the relaxed MIP
-        relaxed_solution = self.solve_relaxed_mip()
-        if Constants.Debug:
-            print("ACFEstablishment_x_wi:\n ", relaxed_solution.ACFEstablishment_x_wi)
-            print("LandRescueVehicle_thetaVar_wim:\n ", relaxed_solution.LandRescueVehicle_thetaVar_wim)
-            print("BackupHospital_W_whhPrime:\n ", relaxed_solution.BackupHospital_W_whhPrime)
+        if Constants.RandomALNSInitilization:
+            # --- random init branch ---
+            ACF_establishment_x_wi, landRescueVehicle_thetaVar_wim, backupHospital_W_whhPrime = self.random_initial_solution()
 
-        # Step 2: Round relaxed solution to nearest integer (initial feasible solution)
-        ACF_establishment_x_wi = relaxed_solution.ACFEstablishment_x_wi
-        Rounded_ACFEstablishment_x_i = self.round_x_variable(ACF_establishment_x_wi[0])
-        if Constants.Debug:print("Rounded_ACFEstablishment_x_wi:\n", Rounded_ACFEstablishment_x_i)
+            # Step 2: Round relaxed solution to nearest integer (initial feasible solution)
+            Rounded_ACFEstablishment_x_i = self.round_x_variable(ACF_establishment_x_wi[0])
+            if Constants.Debug:print("Rounded_ACFEstablishment_x_wi:\n", Rounded_ACFEstablishment_x_i)
 
-        landRescueVehicle_thetaVar_wim = relaxed_solution.LandRescueVehicle_thetaVar_wim
-        Rounded_LandRescueVehicle_thetaVar_im = self.round_thetaVar_variable(Rounded_ACFEstablishment_x_i, landRescueVehicle_thetaVar_wim[0])
-        if Constants.Debug:print("Rounded_LandRescueVehicle_thetaVar_im:\n", Rounded_LandRescueVehicle_thetaVar_im)
+            Rounded_LandRescueVehicle_thetaVar_im = self.round_thetaVar_variable(Rounded_ACFEstablishment_x_i, landRescueVehicle_thetaVar_wim[0])
+            if Constants.Debug:print("Rounded_LandRescueVehicle_thetaVar_im:\n", Rounded_LandRescueVehicle_thetaVar_im)
 
-        backupHospital_W_whhPrime = relaxed_solution.BackupHospital_W_whhPrime
-        Rounded_BackupHospital_W_hhprime = self.round_w_variable(backupHospital_W_whhPrime[0])
-        if Constants.Debug:print("Rounded_BackupHospital_W_whhprime:\n", Rounded_BackupHospital_W_hhprime)
+            Rounded_BackupHospital_W_hhprime = self.round_w_variable(backupHospital_W_whhPrime[0])
+            if Constants.Debug:print("Rounded_BackupHospital_W_whhprime:\n", Rounded_BackupHospital_W_hhprime)
+
+        else:
+            # Step 1: Solve the relaxed MIP
+            relaxed_solution = self.solve_relaxed_mip()
+            if Constants.Debug:
+                print("ACFEstablishment_x_wi:\n ", relaxed_solution.ACFEstablishment_x_wi)
+                print("LandRescueVehicle_thetaVar_wim:\n ", relaxed_solution.LandRescueVehicle_thetaVar_wim)
+                print("BackupHospital_W_whhPrime:\n ", relaxed_solution.BackupHospital_W_whhPrime)
+
+            # Step 2: Round relaxed solution to nearest integer (initial feasible solution)
+            ACF_establishment_x_wi = relaxed_solution.ACFEstablishment_x_wi
+            Rounded_ACFEstablishment_x_i = self.round_x_variable(ACF_establishment_x_wi[0])
+            if Constants.Debug:print("Rounded_ACFEstablishment_x_wi:\n", Rounded_ACFEstablishment_x_i)
+
+            landRescueVehicle_thetaVar_wim = relaxed_solution.LandRescueVehicle_thetaVar_wim
+            Rounded_LandRescueVehicle_thetaVar_im = self.round_thetaVar_variable(Rounded_ACFEstablishment_x_i, landRescueVehicle_thetaVar_wim[0])
+            if Constants.Debug:print("Rounded_LandRescueVehicle_thetaVar_im:\n", Rounded_LandRescueVehicle_thetaVar_im)
+
+            backupHospital_W_whhPrime = relaxed_solution.BackupHospital_W_whhPrime
+            Rounded_BackupHospital_W_hhprime = self.round_w_variable(backupHospital_W_whhPrime[0])
+            if Constants.Debug:print("Rounded_BackupHospital_W_whhprime:\n", Rounded_BackupHospital_W_hhprime)
 
         # Initialize empty lists for the 2D and 3D results
         Rounded_ACFEstablishment_x_wi = []
@@ -847,7 +967,9 @@ class ALNS:
 
         # Step 3: ALNS iterations
         self.CurrentIteration = 1
-        while self.CurrentIteration <= self.MaxIterations:
+        no_improv_iters = 0
+
+        while self.CurrentIteration <= self.MaxIterations and no_improv_iters < Constants.max_no_improv:
             # Check elapsed time
             elapsed_time = time.time() - self.StartTime_ALNS
             if elapsed_time >= Constants.AlgorithmTimeLimit:
@@ -906,19 +1028,28 @@ class ALNS:
                 print(f"New global best cost found: {new_cost}")
                 self.global_best_cost = new_cost
                 self.global_best_solution = fixed_solution
+                no_improv_iters = 0
+            else:
+                no_improv_iters += 1
+
+            # Optionally print when hitting the no‐improv threshold
+            if no_improv_iters >= Constants.max_no_improv:
+                print(f"No improvement in {Constants.max_no_improv} iterations. Stopping ALNS.")
+                break 
 
             # Use the acceptance_check method to decide whether to accept the new solution for further exploration.
             self.acceptance_check(new_cost, fixed_solution, T)
 
             # Log iteration details including elapsed time
             trace_message = (
-                "Iteration: %r, combined_action: %r, new_cost: %r, current_cost: %r, global_best_cost: %r, elapsed_time: %.2f seconds\n"
+                "Iteration: %r, combined_action: %r, new_cost: %r, current_cost: %r, global_best_cost: %r, NoImprove: %r, elapsed_time: %.2f seconds\n"
                 % (
                     self.CurrentIteration,
                     combined_action,
                     new_cost,
                     self.best_cost,
                     self.global_best_cost,
+                    no_improv_iters,
                     elapsed_time,
                 )
             )
