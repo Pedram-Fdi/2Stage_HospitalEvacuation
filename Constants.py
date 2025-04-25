@@ -60,8 +60,8 @@ class Constants( object ):
 
     #Code parameter
     Infinity = 9999999999999999
-    AlgorithmTimeLimit = 1 * 3600     #Whatever you have here, then in the SDDP algorithm, (AlgorithmTimeLimit * |T|) will be used as time limit.
-    
+    AlgorithmTimeLimit = 1 * 3600    
+    PHATimeLimit = 10 * 3600    
     
     MIPTimeLimit = 10 * 3600            #This is only a time limit to solve the extended model via MIP.
     ModelOutputFlag = 0                 #If it is 0, Prevents Gurobi from showing the optimization process!

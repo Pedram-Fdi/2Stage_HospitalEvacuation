@@ -27,15 +27,31 @@ class QNetwork(nn.Module):
         return x
 
 class DQLAgent:
-    
-    def __init__(self, num_actions, state_size, selection_method,
-                 alpha=0.001, gamma=0.9, epsilon=0.1, buffer_size=10000,
-                 batch_size=64, target_update_freq=1000, tau=0.001):
+
+    def __init__(self,
+                 num_actions,
+                 state_size,
+                 selection_method,
+                 alpha=1e-3,
+                 gamma=0.9,
+                 epsilon_start=1.0,       # new
+                 epsilon_final=0.1,       # new
+                 max_steps=10000,         # new
+                 decay_fraction=0.1,      # first 10%
+                 buffer_size=5000,
+                 batch_size=64,
+                 target_update_freq=1000,
+                 tau=0.001):
         self.num_actions = num_actions
         self.state_size = state_size
         self.selection_method = selection_method
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.epsilon_start       = epsilon_start
+        self.epsilon_final       = epsilon_final
+        self.max_steps           = max_steps
+        self.decay_steps         = int(decay_fraction * max_steps)
+        self.steps_done          = 0
+        self.epsilon             = epsilon_start
         self.batch_size = batch_size
         self.target_update_freq = target_update_freq
         self.tau = tau  # Soft update rate
@@ -111,6 +127,17 @@ class DQLAgent:
 
     def select_action(self, state):
         """Select an action based on epsilon-greedy or softmax strategy."""
+        # 1) bump your step counter
+        self.steps_done += 1
+
+        # 2) linearly decay ε over the first `decay_steps` calls
+        if self.steps_done <= self.decay_steps:
+            frac = self.steps_done / self.decay_steps
+            self.epsilon = self.epsilon_start - frac * (self.epsilon_start - self.epsilon_final)
+        else:
+            # beyond the first 10%, freeze at ε_final
+            self.epsilon = self.epsilon_final
+
         if self.selection_method == 'e-greedy':
             # Epsilon-greedy strategy
             if random.random() < self.epsilon:

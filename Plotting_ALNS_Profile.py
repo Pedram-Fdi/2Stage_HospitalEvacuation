@@ -64,8 +64,8 @@ def plot_global_best_cost(folder_path, file_name, x_axis='iteration', time_limit
     plt.show()
 
 # --- Example usage ---
-folder_path = r"C:\PhD\Thesis\Papers\3rd\Code\Results\2nd\Temp"
-file_name   = "ALNStrace_6_10_5_10_3_3_CRP_2Stage_ALNS_250_QMC_42_Q_S_0_0_NS_SOM_Evaluation_False.txt"
+folder_path = r"C:\PhD\Thesis\Papers\3rd\Code\Results\4th\Temp"
+file_name   = "ALNStrace_5_15_5_15_3_5_CRP_2Stage_ALNS_50_RQMC_42_Q_S_1_1_NS_DB_Evaluation_False.txt"
 #file_name   = "ALNStrace_5_10_5_20_3_1_CRP_2Stage_ALNS_100_RQMC_42_Q_S_1_1_NS_KMPP_Evaluation_False.txt"
 
 # Plot cost vs time, stopping at 5000 seconds

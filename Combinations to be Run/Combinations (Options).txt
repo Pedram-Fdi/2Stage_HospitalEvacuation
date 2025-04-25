@@ -1,4 +1,4 @@
-- Avergae (1 option)
+- Average (1 option)
 - MIP model. (1 option)
 - PHA with Quadratic Obj and Penalty parameter rho as ['static', 'dynamic', 'dynamiclearning']. (3 options)
 - PHA with Linear Obj and Penalty parameter rho as ['static', 'dynamic', 'dynamiclearning']. (3 options)
@@ -6,5 +6,5 @@
 - ALNS with RL and [Q-Learning, Deep-Q Learning] wth 2 options as selection method as ['e-greedy', 'softmax']. (4 options)
 - Sampling ['MC', 'QMC', 'RQMC']. (3 options)
 - BBC (Pure + Multiple/Single Cut + Strong Cuts + WarmUp + LBF)
-- Clustering ['M-Means', 'K-Means++', 'SOM']. (3 options)
+- Clustering ['K-Means', 'K-Means++', 'SOM']. (3 options)
 - Evacuation Risk (Constant, Linear, Exponential) (3 options)

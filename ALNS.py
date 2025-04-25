@@ -78,15 +78,18 @@ class ALNS:
         if self.use_RL:
             if self.use_Deep_Q:
                 # Initialize DQLAgent
-                self.RL_Agent = DQLAgent(num_actions = self.num_actions,
-                                         state_size = self.state_size,
-                                         selection_method = selection_method,
-                                         alpha = 0.001,  # Learning rate
-                                         gamma = 0.9,
-                                         epsilon = 0.1,
-                                         buffer_size = 10000,
-                                         batch_size = 64,
-                                         target_update_freq = 1000)
+                self.RL_Agent = DQLAgent(num_actions       = self.num_actions,
+                                        state_size        = self.state_size,
+                                        selection_method  = selection_method,
+                                        alpha             = 1e-3,   # Learning rate
+                                        gamma             = 0.9,
+                                        epsilon_start     = 1.0,     # start fully random
+                                        epsilon_final     = 0.1,     # decay down to 0.1
+                                        max_steps         = Constants.Max_ALNS_Iterations,   # total ALNS iterations
+                                        decay_fraction    = 0.1,     # first 10% of 10 000 = 1 000 steps
+                                        buffer_size       = 5000,
+                                        batch_size        = 64,
+                                        target_update_freq= 500)
             else:
                 # Initialize QLearningAgent
                 self.RL_Agent = RLAgent(num_actions = self.num_actions,

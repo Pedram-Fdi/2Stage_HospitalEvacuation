@@ -581,7 +581,7 @@ class ProgressiveHedging(object):
                               (gapW < Constants.PHConvergenceTolerence))
         
         self.duration = time.time() - self.StartTime
-        timelimitreached = self.duration > Constants.AlgorithmTimeLimit
+        timelimitreached = self.duration > Constants.PHATimeLimit
         iterationlimitreached = self.CurrentIteration > Constants.PHIterationLimit
         result = convergencereached or timelimitreached or iterationlimitreached
 
