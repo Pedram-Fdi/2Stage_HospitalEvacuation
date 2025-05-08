@@ -147,8 +147,8 @@ class ALNS:
         self.sorted_acfs = sorted(self.Instance.ACFSet, key=lambda i: self.Instance.ACF_Bed_Capacity[i], reverse=True)
         # Initialize a list to store log entries
         self.log_buffer = []
-        # Set how often to flush the buffer to file (every 10 iterations)
-        self.flush_interval = 10
+        # Set how often to flush the buffer to file (every 1 iterations)
+        self.flush_interval = 1
 
     def InitTrace(self):
         if Constants.Debug: print("\n We are in 'ALNS' Class -- InitTrace")

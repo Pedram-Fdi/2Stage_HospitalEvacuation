@@ -131,11 +131,11 @@ def generate_instances():
     print("Generating instances...")
 
     for t in range(4, 5, 1):            ## Set it No more than 20 time periods!
-        for i in range(15, 31, 5):
+        for i in range(30, 31, 5):
             for h in range(5, 6, 5):
-                for l in range(15, 31, 5):
+                for l in range(15, 16, 5):
                     for m in range(3, 4, 1):
-                        for instance_number in range(1, 6, 1):
+                        for instance_number in range(41, 51, 1):
                             instance_name = f"{t}_{i}_{h}_{l}_{m}_{instance_number}_CRP"
 
                             instance = Instance(instance_name)
