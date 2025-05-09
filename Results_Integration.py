@@ -2,10 +2,10 @@ import os
 import pandas as pd
 
 # Input and Output
-#input_dir = r"C:\PhD\Thesis\Papers\3rd\Code\Results\6th\Test"
-input_dir = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\Test"
-#output_file = r"C:\PhD\Thesis\Papers\3rd\Code\Results\6th\Results.xlsx"
-output_file = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\Results.xlsx"
+input_dir = r"C:\PhD\Thesis\Papers\3rd\Code\Results\6th-PHA\Test"
+#input_dir = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\Test"
+output_file = r"C:\PhD\Thesis\Papers\3rd\Code\Results\6th-PHA\Results.xlsx"
+#output_file = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\Results.xlsx"
 
 # Define columns for the summary DataFrame
 columns = [
