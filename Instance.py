@@ -487,7 +487,7 @@ class Instance(object):
 
     def Generate_Data_CaseStudy(self, seed=None):
         if Constants.Debug: print("\n We are in 'Instance' Class -- Generate_Data_CaseStudy")
-        excel_file_path = r'C:\PhD\Thesis\Papers\3rd\Code\RL\Case Data\Van\Van_Data.xlsx'  # The path to your Excel file
+        excel_file_path = r'C:\PhD\Thesis\Papers\3rd\Code\Case Data\Van\Van_Data.xlsx'  # The path to your Excel file
 
         if seed is not None:
             random.seed(seed)
