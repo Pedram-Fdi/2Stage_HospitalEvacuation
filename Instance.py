@@ -485,6 +485,582 @@ class Instance(object):
         self.AerialEvacuationRisk_Linear = self.compute_aerial_evacuation_risk(self.CumulativeThreatRiskLinear)
         self.AerialEvacuationRisk_Exponential = self.compute_aerial_evacuation_risk(self.CumulativeThreatRiskExponential)
 
+    def Generate_Data_CaseStudy(self, seed=None):
+        if Constants.Debug: print("\n We are in 'Instance' Class -- Generate_Data_CaseStudy")
+        excel_file_path = r'C:\PhD\Thesis\Papers\3rd\Code\RL\Case Data\Van\Van_Data.xlsx'  # The path to your Excel file
+
+        if seed is not None:
+            random.seed(seed)
+
+        ################################## Generate ACF Bed Capacities
+        sheet_name = 'TMCs_31'  # The sheet containing the ACF data
+        
+        # Read the Excel file
+        df_acfs = pd.read_excel(excel_file_path, sheet_name=sheet_name)
+
+        # Read the Excel file
+        df_acfs = pd.read_excel(excel_file_path, sheet_name=sheet_name, header=None)  # Set header=None if the file has no headers
+
+        # If your file doesn't have column headers, reference columns by index:
+        acf_numbers = df_acfs.iloc[1:32, 0].values  # ACF numbers (from column A, index 0)
+        acf_capacities = df_acfs.iloc[1:32, 3].values  # ACF capacities (from column D, index 3)
+
+        # Assign capacities based on extracted data
+        for i, capacity in enumerate(acf_capacities):
+            self.ACF_Bed_Capacity.append(capacity)
+        print("ACF_Bed_Capacity: ", self.ACF_Bed_Capacity)
+
+        ################################## ACFs with Staging Area for Helicopter
+        """Randomly assigns 50% of ACFs to the set I_A, which represents staging areas for helicopters."""
+        num_selected = max(1, self.NrACFs // 2)  # Ensure at least one ACF is selected
+        self.I_A_Set = set(random.sample(range(self.NrACFs), num_selected))  # Select random ACFs
+        self.I_A_List = list(self.I_A_Set)  
+
+        ################################## Generate Fixed Costs ACF based on ACF Bed Capacities for the Objective Function
+        for i in self.ACFSet:
+            New_Fixed_Cost_ACF_Objective = self.ACF_Bed_Capacity[i] * self.m2_Required_for_Each_Patient * self.Cost_of_Each_m2 * 0.00001
+            New_Fixed_Cost_ACF_Objective = math.floor(1000 * New_Fixed_Cost_ACF_Objective) / 1000
+            self.Fixed_Cost_ACF_Objective.append(New_Fixed_Cost_ACF_Objective)        
+
+        ################################## Generate Fixed Costs ACF based on ACF Bed Capacities for the Constraint
+        for i in self.ACFSet:
+            New_Fixed_Cost_ACF_Constraint = self.ACF_Bed_Capacity[i] * self.m2_Required_for_Each_Patient * self.Cost_of_Each_m2
+            New_Fixed_Cost_ACF_Constraint = math.floor(1000 * New_Fixed_Cost_ACF_Constraint) / 1000
+            self.Fixed_Cost_ACF_Constraint.append(New_Fixed_Cost_ACF_Constraint)
+
+        ################################## Generate Available Budget for ACFs
+        Total_Required_Budget_for_ACF_Establishment = 0
+        for i in self.ACFSet:
+            Total_Required_Budget_for_ACF_Establishment += self.Fixed_Cost_ACF_Constraint[i]
+        Total_Required_Budget_for_ACF_Establishment = ((Total_Required_Budget_for_ACF_Establishment * 17) / 20)
+        Max_Required_Budget_for_ACF_Establishment = max(self.Fixed_Cost_ACF_Constraint)
+        print("Total_Required_Budget_for_ACF_Establishment: ", Total_Required_Budget_for_ACF_Establishment)
+        print("Max_Required_Budget_for_ACF_Establishment: ", Max_Required_Budget_for_ACF_Establishment)
+        
+        self.Total_Budget_ACF_Establishment = max(Total_Required_Budget_for_ACF_Establishment, Max_Required_Budget_for_ACF_Establishment)   # The total available budget to establish ACFs*/
+        
+        ################################## Generate VehicleAssignment_Cost       
+        for m in self.RescueVehicleSet:  
+            New_VehicleAssignment_Cost = random.uniform(self.Min_VehicleAssignment_Cost, self.Max_VehicleAssignment_Cost)
+            New_VehicleAssignment_Cost = math.floor(1000 * New_VehicleAssignment_Cost) / 1000
+            self.VehicleAssignment_Cost.append(New_VehicleAssignment_Cost)
+
+        ##################################  Calculating Forecasted Average Casualty Demand
+        if self.NrDisasterAreas == 94:
+            sheet_name = 'Demands_94'
+
+            # Read the total average demands from the Excel file (assuming demands are in column D, cells D2:D95)
+            df_demand = pd.read_excel(excel_file_path, sheet_name=sheet_name, header=None)
+            total_average_demands = df_demand.iloc[1:95, 3].values  # Reading demands from D2 to D95 (0-indexed)
+
+            # Initialize ForecastedAvgCasualtyDemand array
+            self.ForecastedAvgCasualtyDemand = np.zeros((len(self.TimeBucketSet), len(self.InjuryLevelSet), len(self.DisasterAreaSet)))
+
+            # Define a demand distribution factor to assign more demands to the earlier periods
+            # Example: 50% of total demand is allocated to the first half of the periods, and 50% to the second half
+            period_distribution_factors = np.linspace(0.7, 0.3, len(self.TimeBucketSet))  # This linearly decreases demand across periods
+            period_distribution_factors /= period_distribution_factors.sum()  # Normalize to ensure the sum is 1.0
+
+            # Iterate over each demand location
+            for l, total_location_demand in enumerate(total_average_demands):
+                
+                # Normalize the total demand per location to be distributed across periods, injury types, and blood groups
+                total_demand_allocated = 0
+                
+                # Distribute demand across time periods (more demand in earlier periods)
+                for t, period_factor in enumerate(period_distribution_factors):
+                    
+                    # Calculate demand for the current time period
+                    period_demand = total_location_demand * period_factor
+                    
+                    # Distribute this period's demand across injury levels
+                    for j in self.InjuryLevelSet:
+                        demand_for_injury_level = period_demand * self.Priority_Patient_Percent[j]
+                                                    
+                        # Assign the calculated demand to the forecasted demand matrix and ensure it's rounded up
+                        self.ForecastedAvgCasualtyDemand[t][j][l] = round(demand_for_injury_level)
+                        total_demand_allocated += self.ForecastedAvgCasualtyDemand[t][j][l]
+
+                # Ensure the total demand allocated is equal to the total location demand from the Excel file
+                scaling_factor = total_location_demand / total_demand_allocated if total_demand_allocated > 0 else 0
+                
+                # Scale the demands to match the total demand from the Excel file and ensure integer values
+                for t in self.TimeBucketSet:
+                    for j in self.InjuryLevelSet:
+                        self.ForecastedAvgCasualtyDemand[t][j][l] = math.ceil(self.ForecastedAvgCasualtyDemand[t][j][l] * scaling_factor)
+        
+        elif self.NrDisasterAreas == 60:
+            sheet_name = 'Demands_60'
+
+            # Read the total average demands from the Excel file (assuming demands are in column D, cells D2:D95)
+            df_demand = pd.read_excel(excel_file_path, sheet_name=sheet_name, header=None)
+            total_average_demands = df_demand.iloc[1:61, 4].values  # Reading demands from D2 to D95 (0-indexed)
+
+            # Initialize ForecastedAvgCasualtyDemand array
+            self.ForecastedAvgCasualtyDemand = np.zeros((len(self.TimeBucketSet), len(self.InjuryLevelSet), len(self.DisasterAreaSet)))
+
+            # Define a demand distribution factor to assign more demands to the earlier periods
+            # Example: 50% of total demand is allocated to the first half of the periods, and 50% to the second half
+            period_distribution_factors = np.linspace(0.7, 0.3, len(self.TimeBucketSet))  # This linearly decreases demand across periods
+            period_distribution_factors /= period_distribution_factors.sum()  # Normalize to ensure the sum is 1.0
+
+            # Iterate over each demand location
+            for l, total_location_demand in enumerate(total_average_demands):
+                
+                # Normalize the total demand per location to be distributed across periods, injury types, and blood groups
+                total_demand_allocated = 0
+                
+                # Distribute demand across time periods (more demand in earlier periods)
+                for t, period_factor in enumerate(period_distribution_factors):
+                    
+                    # Calculate demand for the current time period
+                    period_demand = total_location_demand * period_factor
+                    
+                    # Distribute this period's demand across injury levels
+                    for j in self.InjuryLevelSet:
+                        demand_for_injury_level = period_demand * self.Priority_Patient_Percent[j]
+                                                    
+                        # Assign the calculated demand to the forecasted demand matrix and ensure it's rounded up
+                        self.ForecastedAvgCasualtyDemand[t][j][l] = round(demand_for_injury_level)
+                        total_demand_allocated += self.ForecastedAvgCasualtyDemand[t][j][l]
+
+                # Ensure the total demand allocated is equal to the total location demand from the Excel file
+                scaling_factor = total_location_demand / total_demand_allocated if total_demand_allocated > 0 else 0
+                
+                # Scale the demands to match the total demand from the Excel file and ensure integer values
+                for t in self.TimeBucketSet:
+                    for j in self.InjuryLevelSet:
+                        self.ForecastedAvgCasualtyDemand[t][j][l] = math.ceil(self.ForecastedAvgCasualtyDemand[t][j][l] * scaling_factor)
+                
+        elif self.NrDisasterAreas == 30:
+            sheet_name = 'Demands_30'
+
+            # Read the total average demands from the Excel file (assuming demands are in column D, cells D2:D95)
+            df_demand = pd.read_excel(excel_file_path, sheet_name=sheet_name, header=None)
+            total_average_demands = df_demand.iloc[1:31, 3].values  # Reading demands from D2 to D95 (0-indexed)
+
+            # Initialize ForecastedAvgCasualtyDemand array
+            self.ForecastedAvgCasualtyDemand = np.zeros((len(self.TimeBucketSet), len(self.InjuryLevelSet), len(self.DisasterAreaSet)))
+
+            # Define a demand distribution factor to assign more demands to the earlier periods
+            # Example: 50% of total demand is allocated to the first half of the periods, and 50% to the second half
+            period_distribution_factors = np.linspace(0.7, 0.3, len(self.TimeBucketSet))  # This linearly decreases demand across periods
+            period_distribution_factors /= period_distribution_factors.sum()  # Normalize to ensure the sum is 1.0
+
+            # Iterate over each demand location
+            for l, total_location_demand in enumerate(total_average_demands):
+                
+                # Normalize the total demand per location to be distributed across periods, injury types, and blood groups
+                total_demand_allocated = 0
+                
+                # Distribute demand across time periods (more demand in earlier periods)
+                for t, period_factor in enumerate(period_distribution_factors):
+                    
+                    # Calculate demand for the current time period
+                    period_demand = total_location_demand * period_factor
+                    
+                    # Distribute this period's demand across injury levels
+                    for j in self.InjuryLevelSet:
+                        demand_for_injury_level = period_demand * self.Priority_Patient_Percent[j]
+                                                    
+                        # Assign the calculated demand to the forecasted demand matrix and ensure it's rounded up
+                        self.ForecastedAvgCasualtyDemand[t][j][l] = round(demand_for_injury_level)
+                        total_demand_allocated += self.ForecastedAvgCasualtyDemand[t][j][l]
+
+                # Ensure the total demand allocated is equal to the total location demand from the Excel file
+                scaling_factor = total_location_demand / total_demand_allocated if total_demand_allocated > 0 else 0
+                
+                # Scale the demands to match the total demand from the Excel file and ensure integer values
+                for t in self.TimeBucketSet:
+                    for j in self.InjuryLevelSet:
+                        self.ForecastedAvgCasualtyDemand[t][j][l] = math.ceil(self.ForecastedAvgCasualtyDemand[t][j][l] * scaling_factor)
+        
+        # Sum all the elements in the ForecastedAverageDemand array to get the total demand
+        total_demand = np.sum(self.ForecastedAvgCasualtyDemand) 
+        # Print the total demand and the demand array
+
+        ##################################  Calculating Forecasted Average Standard Deviation Casualty Demand
+        if self.NrDisasterAreas == 94:
+            sheet_name = 'Demands_94'
+
+            # Read the Max and Min demands from the Excel file (assuming Max in F2:F95 and Min in G2:G95)
+            df_demand = pd.read_excel(excel_file_path, sheet_name=sheet_name, header=None)
+            max_demands = df_demand.iloc[1:95, 6].values  # Reading max demands from F2 to F95 (0-indexed)
+            min_demands = df_demand.iloc[1:95, 5].values  # Reading min demands from G2 to G95 (0-indexed)
+
+            # Initialize ForecastedSTDCasualtyDemand array
+            self.ForecastedSTDCasualtyDemand = np.zeros((len(self.TimeBucketSet), len(self.InjuryLevelSet), len(self.DisasterAreaSet)))
+
+            # Define a demand distribution factor for standard deviation, same as we did for average demand
+            period_distribution_factors = np.linspace(0.7, 0.3, len(self.TimeBucketSet))  # This linearly decreases demand across periods
+            period_distribution_factors /= period_distribution_factors.sum()  # Normalize to ensure the sum is 1.0
+
+            # Iterate over each demand location
+            for l, (max_demand, min_demand) in enumerate(zip(max_demands, min_demands)):
+                
+                # Calculate the total standard deviation demand for each location
+                total_STD_demand = (max_demand - min_demand) / 2  # This gives the STD for each location
+
+                total_std_demand_allocated = 0  # To track the sum of allocated demand
+                
+                # Distribute standard deviation across time periods (more STD in earlier periods)
+                for t, period_factor in enumerate(period_distribution_factors):
+                    
+                    # Calculate the STD for the current time period
+                    period_std_demand = total_STD_demand * period_factor
+                    
+                    # Distribute this period's STD across injury levels
+                    for j in self.InjuryLevelSet:
+                        std_demand_for_injury_level = period_std_demand * self.Priority_Patient_Percent[j]
+                                                    
+                        # Assign the calculated STD demand to the forecasted STD demand matrix and round
+                        self.ForecastedSTDCasualtyDemand[t][j][l] = round(std_demand_for_injury_level)
+                        total_std_demand_allocated += self.ForecastedSTDCasualtyDemand[t][j][l]
+
+                # Ensure the total STD demand allocated is equal to the calculated total_STD_demand
+                scaling_factor = total_STD_demand / total_std_demand_allocated if total_std_demand_allocated > 0 else 0
+                
+                # Scale the STD demands to match the total demand and ensure integer values
+                for t in self.TimeBucketSet:
+                    for j in self.InjuryLevelSet:
+                        self.ForecastedSTDCasualtyDemand[t][j][l] = math.ceil(self.ForecastedSTDCasualtyDemand[t][j][l] * scaling_factor)
+        
+        if self.NrDisasterAreas == 60:
+            sheet_name = 'Demands_60'
+
+            # Read the Max and Min demands from the Excel file (assuming Max in F2:F95 and Min in G2:G95)
+            df_demand = pd.read_excel(excel_file_path, sheet_name=sheet_name, header=None)
+            max_demands = df_demand.iloc[1:61, 7].values  # Reading max demands from F2 to F95 (0-indexed)
+            min_demands = df_demand.iloc[1:61, 6].values  # Reading min demands from G2 to G95 (0-indexed)
+
+            # Initialize ForecastedSTDCasualtyDemand array
+            self.ForecastedSTDCasualtyDemand = np.zeros((len(self.TimeBucketSet), len(self.InjuryLevelSet), len(self.DisasterAreaSet)))
+
+            # Define a demand distribution factor for standard deviation, same as we did for average demand
+            period_distribution_factors = np.linspace(0.7, 0.3, len(self.TimeBucketSet))  # This linearly decreases demand across periods
+            period_distribution_factors /= period_distribution_factors.sum()  # Normalize to ensure the sum is 1.0
+
+            # Iterate over each demand location
+            for l, (max_demand, min_demand) in enumerate(zip(max_demands, min_demands)):
+                
+                # Calculate the total standard deviation demand for each location
+                total_STD_demand = (max_demand - min_demand) / 2  # This gives the STD for each location
+
+                total_std_demand_allocated = 0  # To track the sum of allocated demand
+                
+                # Distribute standard deviation across time periods (more STD in earlier periods)
+                for t, period_factor in enumerate(period_distribution_factors):
+                    
+                    # Calculate the STD for the current time period
+                    period_std_demand = total_STD_demand * period_factor
+                    
+                    # Distribute this period's STD across injury levels
+                    for j in self.InjuryLevelSet:
+                        std_demand_for_injury_level = period_std_demand * self.Priority_Patient_Percent[j]
+                                                    
+                        # Assign the calculated STD demand to the forecasted STD demand matrix and round
+                        self.ForecastedSTDCasualtyDemand[t][j][l] = round(std_demand_for_injury_level)
+                        total_std_demand_allocated += self.ForecastedSTDCasualtyDemand[t][j][l]
+
+                # Ensure the total STD demand allocated is equal to the calculated total_STD_demand
+                scaling_factor = total_STD_demand / total_std_demand_allocated if total_std_demand_allocated > 0 else 0
+                
+                # Scale the STD demands to match the total demand and ensure integer values
+                for t in self.TimeBucketSet:
+                    for j in self.InjuryLevelSet:
+                        self.ForecastedSTDCasualtyDemand[t][j][l] = math.ceil(self.ForecastedSTDCasualtyDemand[t][j][l] * scaling_factor)
+        
+        if self.NrDisasterAreas == 30:
+            sheet_name = 'Demands_30'
+
+            # Read the Max and Min demands from the Excel file (assuming Max in F2:F95 and Min in G2:G95)
+            df_demand = pd.read_excel(excel_file_path, sheet_name=sheet_name, header=None)
+            max_demands = df_demand.iloc[1:31, 6].values  # Reading max demands from F2 to F95 (0-indexed)
+            min_demands = df_demand.iloc[1:31, 5].values  # Reading min demands from G2 to G95 (0-indexed)
+
+            # Initialize ForecastedSTDCasualtyDemand array
+            self.ForecastedSTDCasualtyDemand = np.zeros((len(self.TimeBucketSet), len(self.InjuryLevelSet), len(self.DisasterAreaSet)))
+
+            # Define a demand distribution factor for standard deviation, same as we did for average demand
+            period_distribution_factors = np.linspace(0.7, 0.3, len(self.TimeBucketSet))  # This linearly decreases demand across periods
+            period_distribution_factors /= period_distribution_factors.sum()  # Normalize to ensure the sum is 1.0
+
+            # Iterate over each demand location
+            for l, (max_demand, min_demand) in enumerate(zip(max_demands, min_demands)):
+                
+                # Calculate the total standard deviation demand for each location
+                total_STD_demand = (max_demand - min_demand) / 2  # This gives the STD for each location
+
+                total_std_demand_allocated = 0  # To track the sum of allocated demand
+                
+                # Distribute standard deviation across time periods (more STD in earlier periods)
+                for t, period_factor in enumerate(period_distribution_factors):
+                    
+                    # Calculate the STD for the current time period
+                    period_std_demand = total_STD_demand * period_factor
+                    
+                    # Distribute this period's STD across injury levels
+                    for j in self.InjuryLevelSet:
+                        std_demand_for_injury_level = period_std_demand * self.Priority_Patient_Percent[j]
+                                                    
+                        # Assign the calculated STD demand to the forecasted STD demand matrix and round
+                        self.ForecastedSTDCasualtyDemand[t][j][l] = round(std_demand_for_injury_level)
+                        total_std_demand_allocated += self.ForecastedSTDCasualtyDemand[t][j][l]
+
+                # Ensure the total STD demand allocated is equal to the calculated total_STD_demand
+                scaling_factor = total_STD_demand / total_std_demand_allocated if total_std_demand_allocated > 0 else 0
+                
+                # Scale the STD demands to match the total demand and ensure integer values
+                for t in self.TimeBucketSet:
+                    for j in self.InjuryLevelSet:
+                        self.ForecastedSTDCasualtyDemand[t][j][l] = math.ceil(self.ForecastedSTDCasualtyDemand[t][j][l] * scaling_factor)
+        
+        # Sum all the elements in the ForecastedStandardDeviationDemand array to get the total STD demand
+        total_std_demand = np.sum(self.ForecastedSTDCasualtyDemand)
+
+        # Ensure STD demand is not greater than average demand
+        for t in self.TimeBucketSet:
+            for j in self.InjuryLevelSet:
+                for l in self.DisasterAreaSet:
+                    if self.ForecastedSTDCasualtyDemand[t][j][l] > self.ForecastedAvgCasualtyDemand[t][j][l]:
+                        self.ForecastedSTDCasualtyDemand[t][j][l] = self.ForecastedAvgCasualtyDemand[t][j][l]
+
+        ##################################  Calculating Hospital Bed Capacity
+        sheet_name = 'Hospitals'  # The sheet containing hospital capacities
+        # Read hospital capacities from the Excel file (cells D5 to D8)
+        df_hospitals = pd.read_excel(excel_file_path, sheet_name=sheet_name, header=None)
+        hospital_capacities = df_hospitals.iloc[4:8, 3].values  # Reading capacities from D5 to D8 (0-indexed)
+        
+        # Initialize Hospital_Bed_Capacity array
+        self.Hospital_Bed_Capacity = np.zeros(len(self.HospitalSet))
+        
+        for h in self.HospitalSet:
+            # Assign hospital capacities from the Excel sheet
+            self.Hospital_Bed_Capacity[h] = hospital_capacities[h]
+
+        ##################################  Calculating Land Rescue Vehicle Capacity
+
+        a = (self.Square_Dimension / 2)
+        nominal_Land_Rescue_Vehicle_Capacity = math.floor(0.5 * (self.Speed_Land / a) * self.Working_Hours_per_Day * self.Number_of_Planning_Days)    # Approximate number of patients transferred in the planning Horizon (Ex: 1 week)
+        nominal_Land_Rescue_Vehicle_Capacity_Ambus = math.floor(0.5 * (self.Speed_Land_AmBus / a) * self.Working_Hours_per_Day * self.Number_of_Planning_Days)    # Approximate number of patients transferred in the planning Horizon (Ex: 1 week)
+        
+        for m in self.RescueVehicleSet:  # Assuming Number_Vehicle_Mode means there are four modes (0 to 3)
+            new_Land_Rescue_Vehicle_Capacity = 0
+            if m == 0:
+                new_Land_Rescue_Vehicle_Capacity = 1 * nominal_Land_Rescue_Vehicle_Capacity
+            elif m == 1:
+                new_Land_Rescue_Vehicle_Capacity = 2 * nominal_Land_Rescue_Vehicle_Capacity
+            elif m == 2:
+                new_Land_Rescue_Vehicle_Capacity = 20 * nominal_Land_Rescue_Vehicle_Capacity_Ambus      ## REf: (Decision support for hospital evacuation and emergency response) and (https://txemtf.org/avada_portfolio/ambus/)
+            elif m >= 3:
+                print("\nThe number of Vehicles (index m) cannot be more than 3!!!!!!!!!\n")
+                input("Press Enter to continue...")  # system("Pause") equivalent in Python
+            self.Land_Rescue_Vehicle_Capacity.append(new_Land_Rescue_Vehicle_Capacity)
+        
+        ##################################  Calculating Aerial Rescue Vehicle Capacity
+
+        a = (self.Square_Dimension / 2)
+        nominal_Aerial_Rescue_Vehicle_Capacity = math.floor(0.5 * (self.Speed_Aerial / a) * self.Working_Hours_per_Day * self.Number_of_Planning_Days)    # Approximate number of patients transferred in the planning Horizon (Ex: 1 week)
+        new_Aerial_Rescue_Vehicle_Capacity = 10 * nominal_Aerial_Rescue_Vehicle_Capacity        ## Ref: (A bi-objective robust optimization model for disaster response planning under uncertainties)
+        self.Aerial_Rescue_Vehicle_Capacity.append(new_Aerial_Rescue_Vehicle_Capacity)
+
+        ##################################  Calculating Distances
+        if self.NrDisasterAreas == 94:
+            df_demands = pd.read_excel(excel_file_path, sheet_name='Demands_94', header=None)
+            demand_latitudes = df_demands.iloc[1:95, 7].values 
+            demand_longitudes = df_demands.iloc[1:95, 8].values
+            self.DisasterArea_Position = list(zip(demand_latitudes, demand_longitudes))
+        elif self.NrDisasterAreas == 60:
+            df_demands = pd.read_excel(excel_file_path, sheet_name='Demands_60', header=None)
+            demand_latitudes = df_demands.iloc[1:61, 8].values  
+            demand_longitudes = df_demands.iloc[1:61, 9].values  
+            self.DisasterArea_Position = list(zip(demand_latitudes, demand_longitudes))
+        elif self.NrDisasterAreas == 30:
+            df_demands = pd.read_excel(excel_file_path, sheet_name='Demands_30', header=None)
+            demand_latitudes = df_demands.iloc[1:31, 7].values  
+            demand_longitudes = df_demands.iloc[1:31, 8].values  
+            self.DisasterArea_Position = list(zip(demand_latitudes, demand_longitudes))  
+
+        # Read latitude and longitude for hospitals
+        df_hospitals = pd.read_excel(excel_file_path, sheet_name='Hospitals', header=None)
+        hospital_latitudes = df_hospitals.iloc[4:8, 4].values  # Latitude: E5 to E8
+        hospital_longitudes = df_hospitals.iloc[4:8, 5].values  # Longitude: F5 to F8
+        self.Hospital_Position = list(zip(hospital_latitudes, hospital_longitudes))
+
+        # Read latitude and longitude for ACFs
+        df_acfs = pd.read_excel(excel_file_path, sheet_name='TMCs_31', header=None)
+        acf_latitudes = df_acfs.iloc[1:32, 4].values  # Latitude: E2 to E32
+        acf_longitudes = df_acfs.iloc[1:32, 5].values  # Longitude: F2 to F32
+        self.ACF_Position = list(zip(acf_latitudes, acf_longitudes))
+
+        # Generate plotting data if required
+        if self.Do_you_need_point_plot == 1:
+            self.Plot_Positions()
+
+        self.Distance_D_A = self.calculate_distances_haversine(self.DisasterArea_Position, self.ACF_Position)
+        self.Distance_A_H = self.calculate_distances_haversine(self.ACF_Position, self.Hospital_Position)
+        self.Distance_D_H = self.calculate_distances_haversine(self.DisasterArea_Position, self.Hospital_Position)
+        self.Distance_A_A = self.calculate_distances_within_same_haversine(self.ACF_Position)
+        self.Distance_H_H = self.calculate_distances_within_same_haversine(self.Hospital_Position)
+        # Combine hospital and ACF positions into a single list
+        MedFacility_Position = self.Hospital_Position + self.ACF_Position        
+        self.Distance_U_U = self.calculate_distances_within_same_haversine(MedFacility_Position)
+
+        # Calculate travel times based on land speed
+        self.Time_D_A_Land = self.Calculate_Travel_Time_Land(self.Distance_D_A, self.Speed_Land)
+        self.Time_A_H_Land = self.Calculate_Travel_Time_Land(self.Distance_A_H, self.Speed_Land)
+        self.Time_D_H_Land = self.Calculate_Travel_Time_Land(self.Distance_D_H, self.Speed_Land)
+        self.Time_A_A_Land = self.Calculate_Travel_Time_Land(self.Distance_A_A, self.Speed_Land)
+        self.Time_H_H_Land = self.Calculate_Travel_Time_Land(self.Distance_H_H, self.Speed_Land)
+        self.Time_U_U_Land = self.Calculate_Travel_Time_Land(self.Distance_U_U, self.Speed_Land)
+
+        # Calculate travel times based on aerial speed
+        self.Time_D_A_Aerial = self.Calculate_Travel_Time_Land(self.Distance_D_A, self.Speed_Aerial)
+        self.Time_A_H_Aerial = self.Calculate_Travel_Time_Land(self.Distance_A_H, self.Speed_Aerial)
+        self.Time_D_H_Aerial = self.Calculate_Travel_Time_Land(self.Distance_D_H, self.Speed_Aerial)
+        self.Time_A_A_Aerial = self.Calculate_Travel_Time_Land(self.Distance_A_A, self.Speed_Aerial)
+        self.Time_H_H_Aerial = self.Calculate_Travel_Time_Land(self.Distance_H_H, self.Speed_Aerial)
+
+        ##################################  Calculating Casualty_Shortage_Cost
+        self.Casualty_Shortage_Cost = np.zeros((len(self.InjuryLevelSet)))
+        
+        for j in self.InjuryLevelSet:
+            New_Casualty_Shortage_Cost = random.randint(self.Min_Casualty_Shortage_Cost, self.Max_Casualty_Shortage_Cost)
+            if j == 0:
+                self.Casualty_Shortage_Cost[j] = New_Casualty_Shortage_Cost
+            if j == 1:
+                self.Casualty_Shortage_Cost[j] = New_Casualty_Shortage_Cost / 2
+
+        ##################################  Calculating Number of Land Rescue Vehicles that can be assigned to each ACF
+        self.Number_Rescue_Vehicle_ACF = self.allocate_rescue_vehicles()
+
+        ##################################  Calculating Number_Land_Rescue_Vehicle_Hospital
+        self.Number_Land_Rescue_Vehicle_Hospital = self.allocate_hospital_rescue_vehicles()
+
+        ################################## Average Hospital Disruption
+        for h in self.HospitalSet:
+            self.ForecastedAvgHospitalDisruption.append(0.45)       ## REF: (Using Collapse Risk Assessments to Inform Seismic Safety Policy for Older Concrete Buildings)     
+        self.ForecastedAvgHospitalDisruption = np.array(self.ForecastedAvgHospitalDisruption)
+
+        ################################## STD Hospital Disruption
+        for h in self.HospitalSet:
+            self.ForecastedSTDHospitalDisruption.append(0.07)      ## REF: (Using Collapse Risk Assessments to Inform Seismic Safety Policy for Older Concrete Buildings)            
+        self.ForecastedSTDHospitalDisruption = np.array(self.ForecastedSTDHospitalDisruption)
+
+        ##################################  Calculating Average Hospital Patient
+        self.ForecastedAvgPatientDemand = np.zeros((len(self.InjuryLevelSet), len(self.HospitalSet)))
+        for j in self.InjuryLevelSet:
+            for h in self.HospitalSet:
+                MinHospitalOccupationRate_Turkey = 0.50
+                MaxHospitalOccupationRate_Turkey = 0.55
+                Min_ForecastedAvgPatientDemand = round(MinHospitalOccupationRate_Turkey * self.Priority_Patient_Percent[j] * self.Hospital_Bed_Capacity[h])
+                Max_ForecastedAvgPatientDemand = round(MaxHospitalOccupationRate_Turkey * self.Priority_Patient_Percent[j] * self.Hospital_Bed_Capacity[h])                
+                total_patient = round((Max_ForecastedAvgPatientDemand + Min_ForecastedAvgPatientDemand) / 2)
+                self.ForecastedAvgPatientDemand[j][h] = total_patient   
+
+        ##################################  Calculating STD Hospital Patient
+        self.ForecastedSTDPatientDemand = np.zeros((len(self.InjuryLevelSet), len(self.HospitalSet)))
+        for j in self.InjuryLevelSet:
+            for h in self.HospitalSet:
+                MinHospitalOccupationRate_Turkey = 0.55
+                MaxHospitalOccupationRate_Turkey = 0.75
+                Min_ForecastedSTDPatientDemand = round(MinHospitalOccupationRate_Turkey * self.Priority_Patient_Percent[j] * self.Hospital_Bed_Capacity[h])
+                Max_ForecastedSTDPatientDemand = round(MaxHospitalOccupationRate_Turkey * self.Priority_Patient_Percent[j] * self.Hospital_Bed_Capacity[h])                
+                total_patient = round((Max_ForecastedSTDPatientDemand - Min_ForecastedSTDPatientDemand) / 2)
+                self.ForecastedSTDPatientDemand[j][h] = total_patient
+
+        ##################################  Calculating Average and STD of Patient Discharged Percentage
+        ForecastedAvgPercentagePatientDischarged_ujt, ForecastedSTDPercentagePatientDischarged_ujt = self.generate_patient_discharge_probabilities(distribution_type = "lognorm")
+        # Convert lists to numpy arrays
+        ForecastedAvgPercentagePatientDischarged_ujt = np.array(ForecastedAvgPercentagePatientDischarged_ujt)
+        ForecastedSTDPercentagePatientDischarged_ujt = np.array(ForecastedSTDPercentagePatientDischarged_ujt)
+        # Reshape from [u][j][t] to [t][j][u]
+        self.ForecastedAvgPercentagePatientDischarged = np.transpose(ForecastedAvgPercentagePatientDischarged_ujt, (2, 1, 0))
+        self.ForecastedSTDPercentagePatientDischarged = np.transpose(ForecastedSTDPercentagePatientDischarged_ujt, (2, 1, 0))
+
+        ################################## Maximum Backup Hospital
+        for h in self.HospitalSet:
+            self.Max_Backup_Hospital.append((self.NrHospitals - 1)) 
+
+        ##################################  Calculating Available Aerial Vehicles
+        self.Available_Aerial_Vehicles_Hospital = np.zeros((len(self.HospitalSet)))
+        
+        for h in self.HospitalSet:
+            New_Available_Aerial_Vehicles_Hospital = random.randint(self.MinAerial_ToBeAssigned, self.MaxAerial_ToBeAssigned)
+            self.Available_Aerial_Vehicles_Hospital[h] = New_Available_Aerial_Vehicles_Hospital
+        self.Available_Aerial_Vehicles_Hospital = np.array(self.Available_Aerial_Vehicles_Hospital)
+        ##################################  Calculating Average Hospital Patient
+        self.CoordinationCost = np.zeros((len(self.HospitalSet), len(self.HospitalSet)))
+        for h in self.HospitalSet:
+            for hPrime in self.HospitalSet:
+                if h == hPrime:
+                    New_CoordinationCost = 1000
+                else:
+                    New_CoordinationCost = random.randint(self.MinCoordinationCost, self.MaxCoordinationCost)
+                self.CoordinationCost[h][hPrime] = New_CoordinationCost   
+        
+        
+        ################################## From This point, I will generate RISK Parameters !!!!!!!!!!!!!!!!!!!!!
+        ## REF: (Decision support for hospital evacuation and emergency response) 
+        ## In this paper MS-II is our High-Priority Patients and MS-I is Low-Priority ones.
+
+        # Risk Cost
+        self.EvacuationRiskCost = np.zeros((len(self.InjuryLevelSet)))
+        for j in self.InjuryLevelSet:
+            if j==0: #High-Priority Evacuation risk cost
+                self.EvacuationRiskCost[j] = self.HighPriority_EvacuationRiskCost
+            elif j==1:
+                self.EvacuationRiskCost[j] = self.HighPriority_EvacuationRiskCost / 2
+
+        # Constant risk model
+        ThreatRiskConstant = self.generate_threat_risk("constant")
+        # Linear risk model
+        ThreatRiskLinear = self.generate_threat_risk("linear")
+        # Exponential risk model
+        ThreatRiskExponential = self.generate_threat_risk("exponential")
+        # Compute cumulative threat risk for each threat risk model
+        self.CumulativeThreatRiskConstant = self.compute_cumulative_threat_risk(ThreatRiskConstant)
+        self.CumulativeThreatRiskLinear = self.compute_cumulative_threat_risk(ThreatRiskLinear)
+        self.CumulativeThreatRiskExponential = self.compute_cumulative_threat_risk(ThreatRiskExponential)
+
+        # Initialize Land_Loading_Time as a list with the same length as the number of rescue vehicle modes
+        self.Land_Loading_Time = [0] * len(self.RescueVehicleSet)
+
+        # Assign loading times (in minutes) for each vehicle type
+        self.Land_Loading_Time[0] = 10  # Advanced life support ambulances
+        self.Land_Loading_Time[1] = 10  # Basic life support ambulances
+        self.Land_Loading_Time[2] = 20  # Ambus (large ambulance/bus hybrid)
+
+        # Define transportation risk parameters (β_jm)
+        self.Land_Transportation_Risk = np.zeros((len(self.InjuryLevelSet), len(self.RescueVehicleSet)))
+
+        # Assign risks for land vehicles
+        self.Land_Transportation_Risk[0][0] = 0.0001  # High-priority, Advanced Ambulance
+        self.Land_Transportation_Risk[0][1] = 0.0002  # High-priority, Basic Ambulance
+        self.Land_Transportation_Risk[0][2] = 0.0005  # High-priority, Ambus
+        self.Land_Transportation_Risk[1][0] = 0.00005  # Low-priority, Advanced Ambulance
+        self.Land_Transportation_Risk[1][1] = 0.00005  # Low-priority, Basic Ambulance
+        self.Land_Transportation_Risk[1][2] = 0.0001  # Low-priority, Ambus
+
+        self.CumulativeLandTransportation_Risk = self.compute_cumulative_land_transportation_risk(self.Land_Transportation_Risk)
+
+        # Assign risks for aerial transport (Helicopters)
+        self.Aerial_Transportation_Risk = np.zeros(len(self.InjuryLevelSet))
+        self.Aerial_Transportation_Risk[0] = 0.0002  # High-priority helicopter transport risk
+        self.Aerial_Transportation_Risk[1] = 0.00008  # Low-priority helicopter transport risk
+
+        self.Aerial_Loading_Time = 20
+
+        self.CumulativeAerialTransportRisk = self.compute_cumulative_aerial_transportation_risk()
+        
+        self.LandEvacuationRisk_Constant = self.compute_land_evacuation_risk(self.CumulativeThreatRiskConstant)
+        self.LandEvacuationRisk_Linear = self.compute_land_evacuation_risk(self.CumulativeThreatRiskLinear)
+        self.LandEvacuationRisk_Exponential = self.compute_land_evacuation_risk(self.CumulativeThreatRiskExponential)
+
+        self.AerialEvacuationRisk_Constant = self.compute_aerial_evacuation_risk(self.CumulativeThreatRiskConstant)
+        self.AerialEvacuationRisk_Linear = self.compute_aerial_evacuation_risk(self.CumulativeThreatRiskLinear)
+        self.AerialEvacuationRisk_Exponential = self.compute_aerial_evacuation_risk(self.CumulativeThreatRiskExponential)
+
     def allocate_rescue_vehicles(self):
         """
         Improved version of estimating and allocating rescue vehicles to ACFs.
@@ -879,6 +1455,47 @@ class Instance(object):
             distances.append(row)
         return distances
 
+    # Haversine formula to calculate distances between two lat/lon points in kilometers
+    def haversine(self, lat1, lon1, lat2, lon2):
+        R = 6371.0  # Radius of the Earth in km
+        Average_Circuity_Factor_Turkey = 1.36  # Circuity factor for Turkey
+
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+
+        a = math.sin(delta_phi / 2.0) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2.0) ** 2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+        distance = (R * c) * Average_Circuity_Factor_Turkey  # Apply the circuity factor to the straight-line distance
+        return round(distance, 2)
+
+    # Calculate distances between two sets of positions using latitude and longitude
+    def calculate_distances_haversine(self, set1, set2):
+        distances = []
+        for pos1 in set1:
+            row = []
+            for pos2 in set2:
+                distance = self.haversine(pos1[0], pos1[1], pos2[0], pos2[1])  # Use self.haversine to call the method
+                row.append(distance)
+            distances.append(row)
+        return distances
+
+    # Calculate distances within the same set
+    def calculate_distances_within_same_haversine(self, set_positions):
+        distances = []
+        for i, pos1 in enumerate(set_positions):
+            row = []
+            for j, pos2 in enumerate(set_positions):
+                if i != j:
+                    distance = self.haversine(pos1[0], pos1[1], pos2[0], pos2[1])  # Use self.haversine here as well
+                else:
+                    distance = 0  # Distance to itself is 0
+                row.append(distance)
+            distances.append(row)
+        return distances
+        
     def Calculate_Distances_Within_Same(self, positions):
         distances = []
         for i, pos1 in enumerate(positions):

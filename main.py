@@ -68,7 +68,7 @@ def parseArguments():
 
         # Mandatory arguments
         parser.add_argument("--Action", help="Action to perform", type=str, choices=["GenerateInstances", "Solve"], default = "GenerateInstances")
-        parser.add_argument("--Instance", help="Instance name", type=str, default="3_5_5_5_3_1_CRP") 
+        parser.add_argument("--Instance", help="Instance name", type=str, default="4_31_4_60_3_1_CRP") 
         parser.add_argument("--Model", help="Stochastic model type", type=str, choices=["Average", "2Stage"], default = "2Stage")
         parser.add_argument("--Solver", help="Solver type", type=str, choices=["MIP", "ALNS", "PHA", "BBC"], default = "ALNS")
         parser.add_argument("--NrScenario", help="The number of scenarios used for optimization (all10 ...)", type=str, default = "50")
@@ -78,13 +78,13 @@ def parseArguments():
         parser.add_argument("--ALNSRL_DeepQ", help="The type of RL we used in ALNS if (ALNSRL==1), Deep Q-Learning(1) or Q-Learning(0)", type=int, choices=["0", "1"], default = 0)
         parser.add_argument("-c", "--bbcsetting", help="Enhancements?", choices=["NE: NoEnhancement", "JM: JustMultiCut", "NM: NoMultiCut", "JS: JustStrongCut", "NS: NoStrongCut", "JW: JustWarmUp", "NW: NoWarmUp", "JL: JustLBF", "NL: NoLBF", "AE: AllEnhancement"], default="AE")
         parser.add_argument("--ScenarioGeneration", help="Which Type of Sampling?", type=str, choices=["MC","RQMC", "QMC"], default="RQMC")
-        parser.add_argument("-Cluster", "--ClusteringMethod", help="The method used for Clustering Scenarios? DB: Decisional-Based", type=str, choices=["NoC", "KM", "KMPP", "SOM", "DB"], default = "NoC") 
+        parser.add_argument("-Cluster", "--ClusteringMethod", help="The method used for Clustering Scenarios? DB: Decisional-Based", type=str, choices=["NoC", "KM", "KMPP", "SOM", "DB"], default = "DB") 
 
 
 
     # Optional arguments
     parser.add_argument("-p", "--policy", help="NearestNeighbor", type=str, default="_")    
-    parser.add_argument("-n", "--nrevaluation", help="nr scenario used for evaluation.", type=int, default = 10)   
+    parser.add_argument("-n", "--nrevaluation", help="nr scenario used for evaluation.", type=int, default = 500)   
     parser.add_argument("-t", "--timehorizon", help="the time horizon used in shiting window.", type=int, default = 1)
     parser.add_argument("-a", "--allscenario", help="generate all possible scenario.", type=int, default = 0)
     parser.add_argument("-s", "--ScenarioSeed", help="The seed used for scenario generation", type=int, default=-1)
@@ -112,8 +112,7 @@ def parseArguments():
                                        alnsRL_DeepQ = args.ALNSRL_DeepQ,                               
                                        rlSelectionMethod = args.RLSelectionMethod,
                                        bbcsetting = args.bbcsetting,                             
-                                       clustering = args.ClusteringMethod,                             
-                                       )
+                                       clustering = args.ClusteringMethod)
     
     EvaluatorIdentifier = EvaluatorIdentificator(policygeneration,  args.nrevaluation, args.timehorizon, args.allscenario)
 
@@ -131,11 +130,11 @@ def generate_instances():
     print("Generating instances...")
 
     for t in range(4, 5, 1):            ## Set it No more than 20 time periods!
-        for i in range(30, 31, 5):
-            for h in range(5, 6, 5):
-                for l in range(15, 16, 5):
+        for i in range(31, 32, 5):
+            for h in range(4, 5, 5):
+                for l in range(94, 95, 30):
                     for m in range(3, 4, 1):
-                        for instance_number in range(41, 51, 1):
+                        for instance_number in range(1, 6, 1):
                             instance_name = f"{t}_{i}_{h}_{l}_{m}_{instance_number}_CRP"
 
                             instance = Instance(instance_name)
@@ -155,7 +154,15 @@ def generate_instances():
                             instance.assign_aerial_acfs(percentage=0.5, seed=Constants.SeedArray[0])
                             instance.assign_backup_hospitals(BackupPercentage=0.8, seed=Constants.SeedArray[0])
 
-                            instance.Generate_Data(Constants.SeedArray[0] + instance_number)
+                            RandomSeed_InstanceGeneration = Constants.SeedArray[0] + instance_number
+                            
+                            if Constants.Case_Study_Data_Generation == 0:
+                                instance.Generate_Data(RandomSeed_InstanceGeneration)
+                            else:
+                                print("-------------- Generating Data for Case Study -------------")
+                                instance.Generate_Data_CaseStudy(RandomSeed_InstanceGeneration)
+
+
                             instance.SaveInstanceToPickle()
                             if Constants.Debug: instance.Print_Attributes()
                             print(f"Instance {instance_name} generated and saved.")

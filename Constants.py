@@ -42,7 +42,7 @@ class Constants( object ):
     
     Debug = False
     Obtain_SecondStage_Solution  = True         # Do NOT CHANGE IT! I will use it when I am working on ALNS and wanna save time, avoiding generating ALNS solutions of the second-stage at each iteration!
-    PrintSolutionFileToExcel = False            # (Defaul: False) If you set this 'True', then all final values of variables and objective function will be printed in Excel too.
+    PrintSolutionFileToExcel = True            # (Defaul: False) If you set this 'True', then all final values of variables and objective function will be printed in Excel too.
     PrintSolutionFileToPickle = True            # (Defaul: True)
     PrintDetailsExcelFiles = False               # (Defaul: False) Here, you save some statistics which is useful for analytical part of the paper!
     RunEvaluationInSeparatedJob = False
@@ -94,6 +94,10 @@ class Constants( object ):
 
     ####################### Scenario Clustering
     ClusteringMethod = "NoC"                    # Do NOT CHANGE IT
+
+    ############### Generating Data for Case Study
+    Case_Study_Data_Generation = True           # If its true, then the data will be generated for the Case Study
+
 
     @staticmethod
     def IsDeterministic(s):

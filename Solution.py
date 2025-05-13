@@ -400,20 +400,23 @@ class Solution(object):
         availableCapFacility_df = self.DataFrameFromList()
 
         file_name = self.GetSolutionFileName(description)
-        
+        if file_name.endswith(".txt"):
+            file_name = file_name.replace(".txt", ".xlsx")
+
         with pd.ExcelWriter(file_name, engine='openpyxl') as writer:
             
             aCFEstablishment_df.to_excel(writer, sheet_name='ACF Establishment')
             landRescueVehicle_df.to_excel(writer, sheet_name='Land Rescue Vehicle')
             backupHospital_df.to_excel(writer, sheet_name='Backup Hospital')
 
-            casualtyTransfer_df.to_excel(writer, sheet_name='Casualty Transfer')
-            unsatisfiedCasualties_df.to_excel(writer, sheet_name='Unsatisfied Casualties')
-            dischargedPatients_df.to_excel(writer, sheet_name='Discharged Patients')
-            landEvacuatedPatients_df.to_excel(writer, sheet_name='Land Evacuated Patients')
-            aerialEvacuatedPatients_df.to_excel(writer, sheet_name='Aerial Evacuated Patients')
-            unevacuatedPatients_df.to_excel(writer, sheet_name='Unevacuated Patients')
-            availableCapFacility_df.to_excel(writer, sheet_name='Available Cap Facility')
+
+            #casualtyTransfer_df.to_excel(writer, sheet_name='Casualty Transfer')
+            #unsatisfiedCasualties_df.to_excel(writer, sheet_name='Unsatisfied Casualties')
+            #dischargedPatients_df.to_excel(writer, sheet_name='Discharged Patients')
+            #landEvacuatedPatients_df.to_excel(writer, sheet_name='Land Evacuated Patients')
+            #aerialEvacuatedPatients_df.to_excel(writer, sheet_name='Aerial Evacuated Patients')
+            #unevacuatedPatients_df.to_excel(writer, sheet_name='Unevacuated Patients')
+            #availableCapFacility_df.to_excel(writer, sheet_name='Available Cap Facility')
 
             generaldf = self.GetGeneralInfoDf()
             generaldf.to_excel(writer, sheet_name="Generic")
