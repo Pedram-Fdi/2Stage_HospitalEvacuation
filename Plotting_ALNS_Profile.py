@@ -26,50 +26,74 @@ def read_log_file(folder_path, file_name):
         "cost": best_costs
     }
 
-def plot_global_best_cost(folder_path, file_name, x_axis='iteration', time_limit=None, iter_limit=None):
+def plot_global_best_cost(folder_path, file_names, x_axis='iteration', time_limit=None, iter_limit=None, best_optimal_solution=None):
     """
-    Plot global best cost against either 'iteration' or 'time', with optional limits.
-    
+    Plot global best cost for one or two log files on the same graph.
+    Optionally plot a horizontal line for the best optimal solution.
+
     Parameters:
-    - folder_path: path to the directory containing the log file
-    - file_name: name of the log file
-    - x_axis: 'iteration' or 'time' to choose the x-axis
-    - time_limit: float, max elapsed time (in seconds) to include
-    - iter_limit: int, max iteration count to include
+    - folder_path: directory containing the log files
+    - file_names: string or list of strings of log file names
+    - x_axis: 'iteration' or 'time' (x-axis)
+    - time_limit: max elapsed time to include
+    - iter_limit: max iteration count to include
+    - best_optimal_solution: float or None, horizontal line value to plot
     """
-    data = read_log_file(folder_path, file_name)
     
-    # Filter based on limits
-    filtered_x = []
-    filtered_y = []
-    for it, t, cost in zip(data["iteration"], data["time"], data["cost"]):
-        if iter_limit is not None and it > iter_limit:
-            break
-        if time_limit is not None and t > time_limit:
-            break
-        filtered_x.append(it if x_axis == 'iteration' else t)
-        filtered_y.append(cost)
-    
-    if not filtered_x:
-        raise ValueError("No data points within given limits.")
-    
-    xlabel = "Iteration" if x_axis == 'iteration' else "Elapsed Time (s)"
+    if isinstance(file_names, str):
+        file_names = [file_names]
+    if len(file_names) > 2:
+        raise ValueError("Currently supports up to two files for comparison.")
     
     plt.figure()
-    plt.plot(filtered_x, filtered_y, marker='o')
+    
+    for file_name in file_names:
+        data = read_log_file(folder_path, file_name)
+        
+        filtered_x = []
+        filtered_y = []
+        for it, t, cost in zip(data["iteration"], data["time"], data["cost"]):
+            if iter_limit is not None and it > iter_limit:
+                break
+            if time_limit is not None and t > time_limit:
+                break
+            filtered_x.append(it if x_axis == 'iteration' else t)
+            filtered_y.append(cost)
+        
+        if not filtered_x:
+            raise ValueError(f"No data points within given limits for file: {file_name}")
+        
+        # Determine label based on file name content
+        if "S_0_0" in file_name:
+            label = "ALNS"
+        elif "S_1_1" in file_name:
+            label = "DRL-ALNS"
+        else:
+            label = file_name  # fallback: just show file name
+        
+        xlabel = "Iteration" if x_axis == 'iteration' else "Elapsed Time (s)"
+        plt.plot(filtered_x, filtered_y, marker=None, label=label)
+    
+    # Add horizontal line for the best optimal solution, if provided
+    if best_optimal_solution is not None:
+        plt.axhline(y=best_optimal_solution, color='red', linestyle='--', label='Best Optimal Solution (MIP)')
+    
     plt.xlabel(xlabel)
     plt.ylabel("Global Best Cost")
     plt.title(f"Global Best Cost vs {xlabel}")
     plt.grid(True)
+    plt.legend()
     plt.show()
 
 # --- Example usage ---
-folder_path = r"C:\PhD\Thesis\Papers\3rd\Code\Results\4th\Temp"
-file_name   = "ALNStrace_5_15_5_15_3_5_CRP_2Stage_ALNS_50_RQMC_42_Q_S_1_1_NS_DB_Evaluation_False.txt"
-#file_name   = "ALNStrace_5_10_5_20_3_1_CRP_2Stage_ALNS_100_RQMC_42_Q_S_1_1_NS_KMPP_Evaluation_False.txt"
 
-# Plot cost vs time, stopping at 5000 seconds
-plot_global_best_cost(folder_path, file_name, x_axis='time', time_limit=None)
+folder_path = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\Temp"
+Best_Optimal_Solution_MIP = None
+file_name_1 = "ALNStrace_5_20_5_20_3_5_CRP_2Stage_ALNS_350_RQMC_42_Q_S_0_0_NS_NoC_Evaluation_False.txt"
+file_name_2 = "ALNStrace_5_20_5_20_3_5_CRP_2Stage_ALNS_350_RQMC_42_Q_S_1_1_NS_NoC_Evaluation_False.txt"
 
-# Plot cost vs iteration, stopping at iteration 100
-#plot_global_best_cost(folder_path, file_name, x_axis='iteration', iter_limit=100)
+# Plot both files together, x-axis = iteration, up to iteration 1000
+#plot_global_best_cost(folder_path, [file_name_1, file_name_2], x_axis='iteration', iter_limit=None, best_optimal_solution=Best_Optimal_Solution_MIP)
+
+# Or plot both files with time axis, no time limit
+plot_global_best_cost(folder_path, [file_name_1, file_name_2], x_axis='time', time_limit = None, best_optimal_solution=Best_Optimal_Solution_MIP)
