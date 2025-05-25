@@ -1340,8 +1340,7 @@ class Instance(object):
 
         return ThreatRisk
 
-    def generate_patient_discharge_probabilities(self, 
-                                                mean_hours=108.89,  # Mean stay for high-priority patients
+    def generate_patient_discharge_probabilities(self, mean_hours=108.89,  # Mean stay for high-priority patients
                                                 distribution_type="custom"):
         """
         Generates the percentage of patients discharged at each period after admission
