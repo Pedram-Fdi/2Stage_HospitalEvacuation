@@ -76,24 +76,30 @@ def plot_global_best_cost(folder_path, file_names, x_axis='iteration', time_limi
     
     # Add horizontal line for the best optimal solution, if provided
     if best_optimal_solution is not None:
-        plt.axhline(y=best_optimal_solution, color='red', linestyle='--', label='Best Optimal Solution (MIP)')
+        plt.axhline(y=best_optimal_solution, color='green', linestyle='--', label='Best Optimal Solution (MIP)')
     
     plt.xlabel(xlabel)
     plt.ylabel("Global Best Cost")
     plt.title(f"Global Best Cost vs {xlabel}")
     plt.grid(True)
     plt.legend()
+
+    # Save the figure
+    output_folder = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\Graphs"
+    output_file = os.path.join(output_folder, os.path.splitext(file_names[0])[0] + ".png")
+    plt.savefig(output_file, bbox_inches='tight', dpi=300)
+
     plt.show()
 
 # --- Example usage ---
 
 folder_path = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\Temp"
-Best_Optimal_Solution_MIP = None
-file_name_1 = "ALNStrace_5_20_5_20_3_5_CRP_2Stage_ALNS_350_RQMC_42_Q_S_0_0_NS_NoC_Evaluation_False.txt"
-file_name_2 = "ALNStrace_5_20_5_20_3_5_CRP_2Stage_ALNS_350_RQMC_42_Q_S_1_1_NS_NoC_Evaluation_False.txt"
+Best_Optimal_Solution_MIP = 670179
+file_name_1 = "ALNStrace_5_20_5_15_3_2_CRP_2Stage_ALNS_350_RQMC_42_Q_S_0_0_NS_NoC_Evaluation_False.txt"
+file_name_2 = "ALNStrace_5_20_5_15_3_2_CRP_2Stage_ALNS_350_RQMC_42_Q_S_1_1_NS_NoC_Evaluation_False.txt"
 
 # Plot both files together, x-axis = iteration, up to iteration 1000
 #plot_global_best_cost(folder_path, [file_name_1, file_name_2], x_axis='iteration', iter_limit=None, best_optimal_solution=Best_Optimal_Solution_MIP)
 
 # Or plot both files with time axis, no time limit
-plot_global_best_cost(folder_path, [file_name_1, file_name_2], x_axis='time', time_limit = None, best_optimal_solution=Best_Optimal_Solution_MIP)
+plot_global_best_cost(folder_path, [file_name_1, file_name_2], x_axis='time', time_limit = 3000, best_optimal_solution=Best_Optimal_Solution_MIP)
