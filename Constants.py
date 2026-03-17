@@ -78,8 +78,8 @@ class Constants( object ):
     Quadratic_to_Linear_PHA = False                  # (Do not Change it) True: There is not Quadratic part in the Objective function of the PHA anymore based on: (A progressive hedging method for the optimization of social engagement and opportunistic IoT problems) article
 
     ####################### ALNS Algorithm
-    Max_ALNS_Iterations = 10000
-    max_no_improv = 100                     ## If after "max_no_improv" iteration, the global best objective has not changed, we stop it!
+    Max_ALNS_Iterations = 1000
+    max_no_improv = 50                     ## If after "max_no_improv" iteration, the global best objective has not changed, we stop it!
     RandomALNSInitilization = False
     
     ####################### BBC Algorithm
@@ -96,9 +96,22 @@ class Constants( object ):
     ClusteringMethod = "NoC"                    # Do NOT CHANGE IT
 
     ############### Generating Data for Case Study
-    Case_Study_Data_Generation = True           # If its true, then the data will be generated for the Case Study
+    Case_Study_Data_Generation = False           # If its true, then the data will be generated for the Case Study
 
+    ############### Sensitivity Analysis for ACF Budget
+    SensitivityAnalysis = False
+    SensitivityAnalysis_ACFBudget = False        # If True, enables sensitivity analysis on ACF budget multiplier
+    ACFBudget_Multiplier_Numerator = 85          # Default numerator for budget calculation (budget = total * numerator / denominator)
+    ACFBudget_Multiplier_Denominator = 100         # Denominator for budget calculation (fixed at 20)
+    SensitivityAnalysis_NumberRescueVehicleACF = False  # If True, enables sensitivity analysis on number of rescue vehicles for ACF
+    SensitivityAnalysis_Casualty_Shortage_Cost = False  # If True, enables sensitivity analysis on casualty shortage cost
+    Casualty_Shortage_Cost_StepSize = 1              # Step size for casualty shortage cost sensitivity analysis (starts from 0)
+    SensitivityAnalysis_AerialACFPercentage = False  # If True, enables sensitivity analysis on percentage of ACFs with aerial capacity
+    AerialACFPercentage_StepSize = 0.05               # Step size for aerial ACF percentage sensitivity analysis (starts from 0, goes to 1.0)
+    SensitivityAnalysis_CoordinationCost = False      # If True, enables sensitivity analysis on coordination cost (starts from 0, increases per instance)
+    Coordination_Cost_StepSize = 1200                    # Step size for coordination cost sensitivity analysis (instance 1: 0, instance 2: 5, instance 3: 10, ...)
 
+    UserInterface = True                         # If it set to True, then, the final solution will be shown on the map!
     @staticmethod
     def IsDeterministic(s):
         result = s == Constants.Average

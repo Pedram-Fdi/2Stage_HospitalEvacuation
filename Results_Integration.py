@@ -2,9 +2,9 @@ import os
 import pandas as pd
 
 # Input and Output
-input_dir = r"C:\PhD\Thesis\Papers\3rd\Code\Case Data\Test"
+input_dir = r"C:\PhD\Thesis\Papers\3rd\Submitted\1_EJOR\R1\ALNS_Initilization\Random_True\Test"
 #input_dir = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\Test"
-output_file = r"C:\PhD\Thesis\Papers\3rd\Code\Case Data\Results.xlsx"
+output_file = r"C:\PhD\Thesis\Papers\3rd\Submitted\1_EJOR\R1\ALNS_Initilization\Random_True\Test\Results.xlsx"
 #output_file = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\Results.xlsx"
 
 # Define columns for the summary DataFrame
@@ -13,8 +13,9 @@ columns = [
     'NrScenario', 'ScenarioSeed', 'PHAObj', 'PHAPenalty', 
     'ALNSRL', 'ALNSRL_DeepQ', 'RLSelectionMethod', 'BBC_Accelerator', 
     'ClusteringMethod', 'All Scenario', 'NrEvaluation', 'Policy Generation', 'Time Horizon', 
-    'GRB Cost', 'MIP Time', 'MIP Gap(%)', 'PHA Cost',
-    'Mean', 'On-Time Transfer', 'On-Time Evacuation', 'Not Evacuated'
+    'GRB Cost', 'GRB Time', 'Total Time', 'MIP Gap(%)', 'PHA Cost',
+    'Mean', 'On-Time Transfer', 'On-Time Evacuation', 'Not Evacuated', 'Evaluation Duration',
+    'Nr ACF Established', 'Nr Land Res. Vehicle Assigned', 'Nr Backup Hospitals'
 ]
 
 # Empty DataFrame
@@ -33,7 +34,8 @@ for file_name in os.listdir(input_dir):
             # Read InSample with header=None to keep both rows
             insample_df = pd.read_excel(file_path, sheet_name="InSample", header=None, engine="openpyxl")
             grb_cost = insample_df.iloc[1, 0]
-            MIP_time = insample_df.iloc[1, 7]
+            grb_time = insample_df.iloc[1, 1]
+            total_time = insample_df.iloc[1, 7]
             MIP_Gap = insample_df.iloc[1, 2]
             pha_cost = insample_df.iloc[1, 5]
 
@@ -43,9 +45,14 @@ for file_name in os.listdir(input_dir):
             on_time_transfer = outsample_df.iloc[1, 24]
             on_time_evacuation = outsample_df.iloc[1, 25]
             not_evacuated = outsample_df.iloc[1, 26]
+            evaluation_duration = outsample_df.iloc[1, 30]
+            # OutOfSample: AB2, AC2, AD2 (0-based: 27, 28, 29)
+            nr_acf_established = outsample_df.iloc[1, 27]
+            nr_land_res_vehicle_assigned = outsample_df.iloc[1, 28]
+            nr_backup_hospitals = outsample_df.iloc[1, 29]
 
             # Combine all into a dictionary row
-            row_data = generic_data + [grb_cost, MIP_time, MIP_Gap, pha_cost, mean, on_time_transfer, on_time_evacuation, not_evacuated]
+            row_data = generic_data + [grb_cost, grb_time, total_time, MIP_Gap, pha_cost, mean, on_time_transfer, on_time_evacuation, not_evacuated, evaluation_duration, nr_acf_established, nr_land_res_vehicle_assigned, nr_backup_hospitals]
             row_df = pd.DataFrame([row_data], columns=columns)
 
             # Append to summary

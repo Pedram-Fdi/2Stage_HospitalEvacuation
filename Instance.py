@@ -6,7 +6,7 @@ import random
 import math
 import numpy as np
 import pickle
-import googlemaps
+#import googlemaps
 import openpyxl as opxl
 from scipy.stats import norm, lognorm, gamma
 
@@ -94,6 +94,9 @@ class Instance(object):
         self.ForecastedSTDCasualtyDemand = []
         self.Land_Rescue_Vehicle_Capacity = []
         self.Aerial_Rescue_Vehicle_Capacity = []
+        self.DisasterArea_Position = []
+        self.ACF_Position = []
+        self.Hospital_Position = []
         self.Distance_D_A = []
         self.Distance_A_H = []
         self.Distance_D_H = []
@@ -230,10 +233,14 @@ class Instance(object):
         Total_Required_Budget_for_ACF_Establishment = 0
         for i in self.ACFSet:
             Total_Required_Budget_for_ACF_Establishment += self.Fixed_Cost_ACF_Constraint[i]
-        Total_Required_Budget_for_ACF_Establishment = ((Total_Required_Budget_for_ACF_Establishment * 17) / 20)
+        # Use budget multiplier from Constants (can be set per instance for sensitivity analysis)
+        budget_multiplier_numerator = getattr(self, 'ACFBudget_Multiplier_Numerator', Constants.ACFBudget_Multiplier_Numerator)
+        budget_multiplier_denominator = Constants.ACFBudget_Multiplier_Denominator
+        Total_Required_Budget_for_ACF_Establishment = ((Total_Required_Budget_for_ACF_Establishment * budget_multiplier_numerator) / budget_multiplier_denominator)
         Max_Required_Budget_for_ACF_Establishment = max(self.Fixed_Cost_ACF_Constraint)
         print("Total_Required_Budget_for_ACF_Establishment: ", Total_Required_Budget_for_ACF_Establishment)
         print("Max_Required_Budget_for_ACF_Establishment: ", Max_Required_Budget_for_ACF_Establishment)
+        print(f"Budget Multiplier Used: {budget_multiplier_numerator}/{budget_multiplier_denominator}")
         
         self.Total_Budget_ACF_Establishment = max(Total_Required_Budget_for_ACF_Establishment, Max_Required_Budget_for_ACF_Establishment)   # The total available budget to establish ACFs*/
         
@@ -353,7 +360,11 @@ class Instance(object):
         self.Casualty_Shortage_Cost = np.zeros((len(self.InjuryLevelSet)))
         
         for j in self.InjuryLevelSet:
-            New_Casualty_Shortage_Cost = random.randint(self.Min_Casualty_Shortage_Cost, self.Max_Casualty_Shortage_Cost)
+            # Use sensitivity analysis value if enabled, otherwise use random
+            if Constants.SensitivityAnalysis and Constants.SensitivityAnalysis_Casualty_Shortage_Cost:
+                New_Casualty_Shortage_Cost = getattr(self, 'Casualty_Shortage_Cost_Value', 0)
+            else:
+                New_Casualty_Shortage_Cost = random.randint(self.Min_Casualty_Shortage_Cost, self.Max_Casualty_Shortage_Cost)
             if j == 0:
                 self.Casualty_Shortage_Cost[j] = New_Casualty_Shortage_Cost
             if j == 1:
@@ -420,7 +431,10 @@ class Instance(object):
                 if h == hPrime:
                     New_CoordinationCost = 1000
                 else:
-                    New_CoordinationCost = random.randint(self.MinCoordinationCost, self.MaxCoordinationCost)
+                    if Constants.SensitivityAnalysis and Constants.SensitivityAnalysis_CoordinationCost:
+                        New_CoordinationCost = getattr(self, 'Coordination_Cost_Value', 0)
+                    else:
+                        New_CoordinationCost = random.randint(self.MinCoordinationCost, self.MaxCoordinationCost)
                 self.CoordinationCost[h][hPrime] = New_CoordinationCost   
         
         
@@ -532,10 +546,14 @@ class Instance(object):
         Total_Required_Budget_for_ACF_Establishment = 0
         for i in self.ACFSet:
             Total_Required_Budget_for_ACF_Establishment += self.Fixed_Cost_ACF_Constraint[i]
-        Total_Required_Budget_for_ACF_Establishment = ((Total_Required_Budget_for_ACF_Establishment * 17) / 20)
+        # Use budget multiplier from Constants (can be set per instance for sensitivity analysis)
+        budget_multiplier_numerator = getattr(self, 'ACFBudget_Multiplier_Numerator', Constants.ACFBudget_Multiplier_Numerator)
+        budget_multiplier_denominator = Constants.ACFBudget_Multiplier_Denominator
+        Total_Required_Budget_for_ACF_Establishment = ((Total_Required_Budget_for_ACF_Establishment * budget_multiplier_numerator) / budget_multiplier_denominator)
         Max_Required_Budget_for_ACF_Establishment = max(self.Fixed_Cost_ACF_Constraint)
         print("Total_Required_Budget_for_ACF_Establishment: ", Total_Required_Budget_for_ACF_Establishment)
         print("Max_Required_Budget_for_ACF_Establishment: ", Max_Required_Budget_for_ACF_Establishment)
+        print(f"Budget Multiplier Used: {budget_multiplier_numerator}/{budget_multiplier_denominator}")
         
         self.Total_Budget_ACF_Establishment = max(Total_Required_Budget_for_ACF_Establishment, Max_Required_Budget_for_ACF_Establishment)   # The total available budget to establish ACFs*/
         
@@ -925,7 +943,11 @@ class Instance(object):
         self.Casualty_Shortage_Cost = np.zeros((len(self.InjuryLevelSet)))
         
         for j in self.InjuryLevelSet:
-            New_Casualty_Shortage_Cost = random.randint(self.Min_Casualty_Shortage_Cost, self.Max_Casualty_Shortage_Cost)
+            # Use sensitivity analysis value if enabled, otherwise use random
+            if Constants.SensitivityAnalysis and Constants.SensitivityAnalysis_Casualty_Shortage_Cost:
+                New_Casualty_Shortage_Cost = getattr(self, 'Casualty_Shortage_Cost_Value', 0)
+            else:
+                New_Casualty_Shortage_Cost = random.randint(self.Min_Casualty_Shortage_Cost, self.Max_Casualty_Shortage_Cost)
             if j == 0:
                 self.Casualty_Shortage_Cost[j] = New_Casualty_Shortage_Cost
             if j == 1:
@@ -996,7 +1018,10 @@ class Instance(object):
                 if h == hPrime:
                     New_CoordinationCost = 1000
                 else:
-                    New_CoordinationCost = random.randint(self.MinCoordinationCost, self.MaxCoordinationCost)
+                    if Constants.SensitivityAnalysis and Constants.SensitivityAnalysis_CoordinationCost:
+                        New_CoordinationCost = getattr(self, 'Coordination_Cost_Value', 0)
+                    else:
+                        New_CoordinationCost = random.randint(self.MinCoordinationCost, self.MaxCoordinationCost)
                 self.CoordinationCost[h][hPrime] = New_CoordinationCost   
         
         
@@ -1105,6 +1130,13 @@ class Instance(object):
 
         # Step 5: Ensure descending order explicitly
         self.Number_Rescue_Vehicle_ACF = np.sort(self.Number_Rescue_Vehicle_ACF)[::-1]  # Sort in descending order
+        
+        # Apply sensitivity analysis multiplier if enabled
+        if Constants.SensitivityAnalysis and Constants.SensitivityAnalysis_NumberRescueVehicleACF:
+            multiplier = getattr(self, 'RescueVehicleACF_Multiplier', 1.0)
+            self.Number_Rescue_Vehicle_ACF = self.Number_Rescue_Vehicle_ACF * multiplier
+            # Ensure integer values after multiplication
+            self.Number_Rescue_Vehicle_ACF = np.ceil(self.Number_Rescue_Vehicle_ACF).astype(int)
         
         return self.Number_Rescue_Vehicle_ACF        
 
@@ -1575,6 +1607,9 @@ class Instance(object):
                 'ForecastedSTDCasualtyDemand': self.ForecastedSTDCasualtyDemand,
                 'Land_Rescue_Vehicle_Capacity': self.Land_Rescue_Vehicle_Capacity,
                 'Aerial_Rescue_Vehicle_Capacity': self.Aerial_Rescue_Vehicle_Capacity,
+                'DisasterArea_Position': self.DisasterArea_Position,
+                'ACF_Position': self.ACF_Position,
+                'Hospital_Position': self.Hospital_Position,
                 'Distance_D_A': self.Distance_D_A,
                 'Distance_A_H': self.Distance_A_H,
                 'Distance_D_H': self.Distance_D_H,
@@ -1671,6 +1706,9 @@ class Instance(object):
                 'ForecastedSTDCasualtyDemand': self.ForecastedSTDCasualtyDemand,
                 'Land_Rescue_Vehicle_Capacity': self.Land_Rescue_Vehicle_Capacity,
                 'Aerial_Rescue_Vehicle_Capacity': self.Aerial_Rescue_Vehicle_Capacity,
+                'DisasterArea_Position': self.DisasterArea_Position,
+                'ACF_Position': self.ACF_Position,
+                'Hospital_Position': self.Hospital_Position,
                 'Distance_D_A': self.Distance_D_A,
                 'Distance_A_H': self.Distance_A_H,
                 'Distance_D_H': self.Distance_D_H,
@@ -1759,6 +1797,9 @@ class Instance(object):
             self.ForecastedSTDCasualtyDemand = data_loaded['ForecastedSTDCasualtyDemand']
             self.Land_Rescue_Vehicle_Capacity = data_loaded['Land_Rescue_Vehicle_Capacity']
             self.Aerial_Rescue_Vehicle_Capacity = data_loaded['Aerial_Rescue_Vehicle_Capacity']
+            self.DisasterArea_Position = data_loaded['DisasterArea_Position']
+            self.ACF_Position = data_loaded['ACF_Position']
+            self.Hospital_Position = data_loaded['Hospital_Position']
             self.Distance_D_A = data_loaded['Distance_D_A']
             self.Distance_A_H = data_loaded['Distance_A_H']
             self.Distance_D_H = data_loaded['Distance_D_H']

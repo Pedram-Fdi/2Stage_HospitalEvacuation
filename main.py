@@ -9,6 +9,7 @@ import numpy as np
 import argparse
 import platform
 import sys
+import VisualizeFacilities_OnRealMap
 
 def CreateRequiredDir():
     if Constants.Debug:
@@ -68,23 +69,23 @@ def parseArguments():
 
         # Mandatory arguments
         parser.add_argument("--Action", help="Action to perform", type=str, choices=["GenerateInstances", "Solve"], default = "GenerateInstances")
-        parser.add_argument("--Instance", help="Instance name", type=str, default="4_31_4_60_3_1_CRP") 
+        parser.add_argument("--Instance", help="Instance name", type=str, default="4_15_5_30_3_1_CRP") 
         parser.add_argument("--Model", help="Stochastic model type", type=str, choices=["Average", "2Stage"], default = "2Stage")
-        parser.add_argument("--Solver", help="Solver type", type=str, choices=["MIP", "ALNS", "PHA", "BBC"], default = "ALNS")
-        parser.add_argument("--NrScenario", help="The number of scenarios used for optimization (all10 ...)", type=str, default = "50")
+        parser.add_argument("--Solver", help="Solver type", type=str, choices=["MIP", "ALNS", "PHA", "BBC"], default = "MIP")
+        parser.add_argument("--NrScenario", help="The number of scenarios used for optimization (all10 ...)", type=str, default = "25")
         parser.add_argument("--PHAObj", help="Obj. function of PHA either Quadratic or Linear", type=str, choices=["Q", "L"], default = "Q")
         parser.add_argument("--PHAPenalty", help="Penalty Parameter (rho) in PHA, Static, Dynamic, dynamic Learning", type=str, choices=["S", "D", "DL"], default = "S")
         parser.add_argument("--ALNSRL", help="Whether we use RL in ALNS or not", type=int, choices=["0", "1"], default = 1)
         parser.add_argument("--ALNSRL_DeepQ", help="The type of RL we used in ALNS if (ALNSRL==1), Deep Q-Learning(1) or Q-Learning(0)", type=int, choices=["0", "1"], default = 0)
-        parser.add_argument("-c", "--bbcsetting", help="Enhancements?", choices=["NE: NoEnhancement", "JM: JustMultiCut", "NM: NoMultiCut", "JS: JustStrongCut", "NS: NoStrongCut", "JW: JustWarmUp", "NW: NoWarmUp", "JL: JustLBF", "NL: NoLBF", "AE: AllEnhancement"], default="AE")
+        parser.add_argument("-c", "--bbcsetting", help="Enhancements?", choices=["NE: NoEnhancement", "JM: JustMultiCut", "NM: NoMultiCut", "JS: JustStrongCut", "NS: NoStrongCut", "JW: JustWarmUp", "NW: NoWarmUp", "JL: JustLBF", "NL: NoLBF", "AE: AllEnhancement"], default="NS")
         parser.add_argument("--ScenarioGeneration", help="Which Type of Sampling?", type=str, choices=["MC","RQMC", "QMC"], default="RQMC")
-        parser.add_argument("-Cluster", "--ClusteringMethod", help="The method used for Clustering Scenarios? DB: Decisional-Based", type=str, choices=["NoC", "KM", "KMPP", "SOM", "DB"], default = "DB") 
+        parser.add_argument("-Cluster", "--ClusteringMethod", help="The method used for Clustering Scenarios? DB: Decisional-Based", type=str, choices=["NoC", "KM", "KMPP", "SOM", "DB"], default = "NoC") 
 
 
 
     # Optional arguments
     parser.add_argument("-p", "--policy", help="NearestNeighbor", type=str, default="_")    
-    parser.add_argument("-n", "--nrevaluation", help="nr scenario used for evaluation.", type=int, default = 500)   
+    parser.add_argument("-n", "--nrevaluation", help="nr scenario used for evaluation.", type=int, default = 50)   
     parser.add_argument("-t", "--timehorizon", help="the time horizon used in shiting window.", type=int, default = 1)
     parser.add_argument("-a", "--allscenario", help="generate all possible scenario.", type=int, default = 0)
     parser.add_argument("-s", "--ScenarioSeed", help="The seed used for scenario generation", type=int, default=-1)
@@ -124,17 +125,18 @@ def parseArguments():
     if args.Model == "Average" and args.ClusteringMethod == "DB":
         print("Error: 'Average' model cannot be used with DB (Decisional‑Based) clustering.")
         sys.exit(1)
-        
+
 # Generate instances
 def generate_instances():
     print("Generating instances...")
 
     for t in range(4, 5, 1):            ## Set it No more than 20 time periods!
-        for i in range(31, 32, 5):
-            for h in range(4, 5, 5):
-                for l in range(94, 95, 30):
+        for i in range(20, 21, 5):
+            for h in range(5, 6, 5):
+                for l in range(20, 21, 5):
                     for m in range(3, 4, 1):
                         for instance_number in range(1, 6, 1):
+
                             instance_name = f"{t}_{i}_{h}_{l}_{m}_{instance_number}_CRP"
 
                             instance = Instance(instance_name)
@@ -150,12 +152,61 @@ def generate_instances():
 
                             instance.build_J_u()            ## Creates a [J*U] binary matrix accordingly
                             instance.build_J_m()            ## Creates a [J*M] binary matrix accordingly
-                            # Assign a percentage of ACFs as aerial-equipped
-                            instance.assign_aerial_acfs(percentage=0.5, seed=Constants.SeedArray[0])
+                            
+                            # Initialize default aerial ACF percentage (will be updated in sensitivity analysis if enabled)
+                            aerial_acf_percentage = 0.5
+                            
+                            ####################### Sensitivity Analysis #######################
+                            if Constants.SensitivityAnalysis:
+                                # No changes on all parameters (only keep one parameter changed)
+                                RandomSeed_InstanceGeneration = Constants.SeedArray[0] + 0
+                                if Constants.SensitivityAnalysis_ACFBudget:
+                                    # For instance 1, use multiplier 1/20; instance 2, use 2/20, etc.
+                                    instance.ACFBudget_Multiplier_Numerator = instance_number
+                                else:
+                                    # No changes on ACF Budget Multiplier
+                                    instance.ACFBudget_Multiplier_Numerator = Constants.ACFBudget_Multiplier_Numerator
+                                
+                                if Constants.SensitivityAnalysis_NumberRescueVehicleACF:
+                                    # For instance 1, use multiplier 1/100; instance 2, use 2/100, etc.
+                                    instance.RescueVehicleACF_Multiplier = instance_number / 100.0
+                                else:
+                                    # No changes on Rescue Vehicle ACF Multiplier
+                                    instance.RescueVehicleACF_Multiplier = 1.0
+                                
+                                if Constants.SensitivityAnalysis_Casualty_Shortage_Cost:
+                                    # For instance 1, use 0; instance 2, use 10; instance 3, use 20, etc.
+                                    instance.Casualty_Shortage_Cost_Value = (instance_number - 1) * Constants.Casualty_Shortage_Cost_StepSize
+                                else:
+                                    # No changes on Casualty Shortage Cost
+                                    instance.Casualty_Shortage_Cost_Value = None
+                                
+                                if Constants.SensitivityAnalysis_AerialACFPercentage:
+                                    # For instance 1, use 0.0; instance 2, use 0.05; instance 3, use 0.10, etc. (up to 1.0)
+                                    aerial_acf_percentage = min((instance_number - 1) * Constants.AerialACFPercentage_StepSize, 1.0)
+                                else:
+                                    # No changes on Aerial ACF Percentage
+                                    aerial_acf_percentage = 0.5
+                                
+                                if Constants.SensitivityAnalysis_CoordinationCost:
+                                    # For instance 1 use 0; instance 2 use 5; instance 3 use 10, etc.
+                                    instance.Coordination_Cost_Value = (instance_number - 1) * Constants.Coordination_Cost_StepSize
+                                else:
+                                    instance.Coordination_Cost_Value = None
+                            else:
+                                RandomSeed_InstanceGeneration = Constants.SeedArray[0] + instance_number
+                                # Set default values when sensitivity analysis is disabled
+                                instance.ACFBudget_Multiplier_Numerator = Constants.ACFBudget_Multiplier_Numerator
+                                instance.RescueVehicleACF_Multiplier = 1.0
+                                instance.Casualty_Shortage_Cost_Value = None
+                                instance.Coordination_Cost_Value = None
+                            
+                            ####################### END of Sensitivity Analysis #######################
+                            
+                            # Assign a percentage of ACFs as aerial-equipped (using sensitivity analysis value if enabled)
+                            instance.assign_aerial_acfs(percentage=aerial_acf_percentage, seed=Constants.SeedArray[0])
                             instance.assign_backup_hospitals(BackupPercentage=0.8, seed=Constants.SeedArray[0])
 
-                            RandomSeed_InstanceGeneration = Constants.SeedArray[0] + instance_number
-                            
                             if Constants.Case_Study_Data_Generation == 0:
                                 instance.Generate_Data(RandomSeed_InstanceGeneration)
                             else:
@@ -170,11 +221,23 @@ def generate_instances():
 def Solve(instance):
     if Constants.Debug: print("We are in Solve Method - main.py Class")
     global LastFoundSolution
-    
+   
     solver = Solver(instance, TestIdentifier)
     solution = solver.Solve()
-    
+   
+    if Constants.UserInterface == 1:
+        from VisualizeFacilities import plot_facilities
+        
+        main_filename = TestIdentifier.InstanceName + "_" + TestIdentifier.Model + "_" + TestIdentifier.Solver
+        filename = main_filename + "_all_facilities.png"
+        plot_facilities(instance, filename=filename)
+        
+        # Second plot with only open ACFs using same fixed bounds
+        filename = main_filename + "_open_acfs_only.png"
+        plot_facilities(instance, solution, only_open_acfs=True, filename=filename)
+
     LastFoundSolution = solution
+
     Constants.Evaluation_Part = True
     #Constants.ClusteringMethod = 'NoC'
     if Constants.Evaluation_Part:
@@ -280,3 +343,51 @@ if __name__ == "__main__":
         print("Debugging LP file...")
 
     print("****************************** WE ARE DONE *************************************")  
+
+
+####################### If you wanna have user interface ###########################
+def run_model_with_parameters(args_dict):
+    CreateRequiredDir()
+
+    global TestIdentifier, EvaluatorIdentifier, Action
+
+    Action = args_dict.get("Action", "Solve")
+
+    TestIdentifier = TestIdentificator(
+        instance_name=args_dict["Instance"],
+        model=args_dict["Model"],
+        solver=args_dict["Solver"],
+        nrScenario=args_dict["NrScenario"],
+        seed=Constants.SeedArray[args_dict["ScenarioSeed"]],
+        sampling=args_dict["ScenarioGeneration"],
+        phaobj=args_dict["PHAObj"],
+        phapenalty=args_dict["PHAPenalty"],
+        alnsRL=args_dict["ALNSRL"],
+        alnsRL_DeepQ=args_dict["ALNSRL_DeepQ"],
+        rlSelectionMethod=args_dict.get("RLSelectionMethod", "e-greedy"),
+        bbcsetting=args_dict.get("bbcsetting", "AE"),
+        clustering=args_dict["ClusteringMethod"]
+    )
+
+    EvaluatorIdentifier = EvaluatorIdentificator(
+        args_dict.get("policy", "_"),
+        args_dict.get("nrevaluation", 5),
+        args_dict.get("timehorizon", 1),
+        args_dict.get("allscenario", 0)
+    )
+
+    # Solve or generate
+    if Action == "GenerateInstances":
+        generate_instances()
+    elif Action == "Solve":
+        try:
+            instance = Instance(TestIdentifier.InstanceName)
+            instance.LoadInstanceFromPickle(TestIdentifier.InstanceName)
+        except FileNotFoundError:
+            instance = Instance(TestIdentifier.InstanceName)
+            instance.Generate_Data(TestIdentifier.Seed)
+            instance.SaveInstanceToPickle()
+
+        Solve(instance)
+
+    return os.path.join("UI", "Solution_UI", instance.InstanceName + "_all_facilities.png")

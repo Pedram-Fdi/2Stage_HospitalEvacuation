@@ -1,0 +1,17 @@
+streamlit
+langchain
+openai
+python-dotenv
+pillow
+numpy
+pandas
+scipy
+openpyxl
+torch==2.0.1
+gurobipy
+geopandas
+contextily
+matplotlib
+shapely
+scikit-learn
+minisom
