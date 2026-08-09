@@ -130,7 +130,7 @@ def parseArguments():
 def generate_instances():
     print("Generating instances...")
 
-    for t in range(4, 5, 1):            ## Set it No more than 20 time periods!
+    for t in range(4, 15, 1):            ## Set it No more than 20 time periods!
         for i in range(20, 21, 5):
             for h in range(5, 6, 5):
                 for l in range(20, 21, 5):
