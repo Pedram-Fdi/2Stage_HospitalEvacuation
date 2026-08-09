@@ -42,7 +42,8 @@ class ScenarioTree:
         self.CasualtyDemand = None  
         self.HospitalDisruption = None  
         self.PatientDemand = None  
-        self.PatientDischargedPercentage = None 
+        self.PatientDischargedPercentage = None
+        self.HospitalTreatmentCapacity = None
         self.CopyscenariofromMulti_Stage = CopyscenariofromMulti_Stage
 
         if self.CopyscenariofromMulti_Stage:
@@ -95,6 +96,18 @@ class ScenarioTree:
             if self.AverageScenarioTree:
                 self.PatientDischargedPercentage = self.compute_average_uncertain_parameter_scenario(self.PatientDischargedPercentage, rounding='float')
 
+            ###################### Generate Hospital Treatment Capacity scenarios
+            HospitalTreatmentCapacity_param_dim = (self.Instance.NrHospitals,)
+            self.HospitalTreatmentCapacity = self.generate_uncertain_parameter_scenarios(param_dim = HospitalTreatmentCapacity_param_dim,
+                                                                                          Avg = self.Instance.ForecastedAvgHospitalTreatmentCapacity,
+                                                                                          STD = self.Instance.ForecastedSTDHospitalTreatmentCapacity,
+                                                                                          rounding='int',
+                                                                                          non_negative=True,
+                                                                                          Clustering = Constants.ClusteringMethod)
+            self.HospitalTreatmentCapacity_LBF = self.compute_average_uncertain_parameter_scenario(self.HospitalTreatmentCapacity, rounding='float')
+            if self.AverageScenarioTree:
+                self.HospitalTreatmentCapacity = self.compute_average_uncertain_parameter_scenario(self.HospitalTreatmentCapacity, rounding='int')
+
             if (Constants.Evaluation_Part == False) and (Constants.ClusteringMethod == 'DB'):
                 start = time.time()
                 self.Scenario_DB = copy.copy(self)
@@ -103,7 +116,8 @@ class ScenarioTree:
                                                                     self.CasualtyDemand,
                                                                     self.HospitalDisruption,
                                                                     self.PatientDemand,
-                                                                    self.PatientDischargedPercentage)
+                                                                    self.PatientDischargedPercentage,
+                                                                    self.HospitalTreatmentCapacity)
                 if(Constants.Debug):print("selected_indices: ", selected_indices)
                 # if requested, keep some random others to reach nrscenario total
                 if Constants.KeepSomeRandomScenarioInDBClustering:
@@ -123,6 +137,7 @@ class ScenarioTree:
                 self.HospitalDisruption          = self.HospitalDisruption[final_indices, ...]
                 self.PatientDemand               = self.PatientDemand[final_indices, ...]
                 self.PatientDischargedPercentage = self.PatientDischargedPercentage[final_indices, ...]
+                self.HospitalTreatmentCapacity   = self.HospitalTreatmentCapacity[final_indices, ...]
                 
                 elapsed = time.time() - start
                 print(f"------------------ DB reduction took {elapsed:.2f} seconds -----------------")
@@ -231,7 +246,7 @@ class ScenarioTree:
         return scenarios.reshape(num_scenarios, *param_dim)
 
 
-    def _decision_based_reduction(self, nrscenario, tree_for_db, casualty_pool, hospital_pool, patient_pool, discharged_pool):
+    def _decision_based_reduction(self, nrscenario, tree_for_db, casualty_pool, hospital_pool, patient_pool, discharged_pool, capacity_pool):
         
         from MIPSolver import MIPSolver
 
@@ -248,6 +263,7 @@ class ScenarioTree:
             tree_for_db.HospitalDisruption           = hospital_pool[i : i+1]
             tree_for_db.PatientDemand                = patient_pool[i : i+1]
             tree_for_db.PatientDischargedPercentage  = discharged_pool[i : i+1]
+            tree_for_db.HospitalTreatmentCapacity    = capacity_pool[i : i+1]
 
             # 2) solve exactly that single‐scenario tree
             MIPSolver_DB = MIPSolver(instance = self.Instance,
@@ -269,6 +285,7 @@ class ScenarioTree:
                     tree_for_db.HospitalDisruption           = hospital_pool[j : j+1]
                     tree_for_db.PatientDemand                = patient_pool[j : j+1]
                     tree_for_db.PatientDischargedPercentage  = discharged_pool[j : j+1]
+                    tree_for_db.HospitalTreatmentCapacity    = capacity_pool[j : j+1]
 
                     MIPSolver_Eval = MIPSolver( instance = self.Instance, 
                                                 model = Constants.Two_Stage, 
@@ -439,6 +456,9 @@ class ScenarioTree:
 
         scenario_tree_attributes.pop('PatientDischargedPercentage', None)
         if(Constants.Debug): print("self.PatientDischargedPercentage:\n", self.PatientDischargedPercentage)
+
+        scenario_tree_attributes.pop('HospitalTreatmentCapacity', None)
+        if(Constants.Debug): print("self.HospitalTreatmentCapacity:\n", self.HospitalTreatmentCapacity)
         
         # Create a list of Scenario objects
         scenario_set = []
@@ -447,10 +467,12 @@ class ScenarioTree:
             hospitalDisruption = self.HospitalDisruption[scenario_idx]  # Get the HospitalDisruption for this scenario
             patientDemand = self.PatientDemand[scenario_idx]  # Get the PatientDemand for this scenario
             patientDischargedPercentage = self.PatientDischargedPercentage[scenario_idx]  # Get the PatientDischargedPercentage for this scenario
+            hospitalTreatmentCapacity = self.HospitalTreatmentCapacity[scenario_idx]  # Get the HospitalTreatmentCapacity for this scenario
             scenario = Scenario(casualtyDemand = casualtyDemand, 
                                 hospitalDisruption = hospitalDisruption, 
                                 patientDemand = patientDemand, 
-                                patientDischargedPercentage = patientDischargedPercentage, 
+                                patientDischargedPercentage = patientDischargedPercentage,
+                                hospitalTreatmentCapacity = hospitalTreatmentCapacity,
                                 **scenario_tree_attributes)  # Pass all other attributes dynamically
             scenario_set.append(scenario)  # Append to the ScenarioSet
 
@@ -481,6 +503,10 @@ class ScenarioTree:
                                                 for j in self.Instance.InjuryLevelSet]
                                                 for t in self.Instance.TimeBucketSet]
                                                 for s in range(nrscenario)]
+
+        self.HospitalTreatmentCapacity = [[scenarioset[s].HospitalTreatmentCapacity[h]
+                                                for h in self.Instance.HospitalSet]
+                                                for s in range(nrscenario)]
         
         self.Probability = [scenarioset[s].Probability for s in range(nrscenario)]
 
@@ -489,4 +515,5 @@ class ScenarioTree:
             print("self.HospitalDisruption:\n" , self.HospitalDisruption)
             print("self.PatientDemand:\n" , self.PatientDemand)
             print("self.PatientDischargedPercentage:\n" , self.PatientDischargedPercentage)
+            print("self.HospitalTreatmentCapacity:\n" , self.HospitalTreatmentCapacity)
             print("self.Probability:" , self.Probability)

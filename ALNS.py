@@ -89,7 +89,8 @@ class ALNS:
                                         decay_fraction    = 0.1,     # first 10% of 10 000 = 1 000 steps
                                         buffer_size       = 5000,
                                         batch_size        = 64,
-                                        target_update_freq= 500)
+                                        target_update_freq= 100,   # in gradient steps, must be reachable within a run
+                                        learning_starts   = 32)
             else:
                 # Initialize QLearningAgent
                 self.RL_Agent = RLAgent(num_actions = self.num_actions,
@@ -570,6 +571,7 @@ class ALNS:
             pass
         
         thetaVar_solution_mi = self.check_limited_number_of_rescue_vehicles(thetaVar_solution)
+        thetaVar_solution_mi = self.check_total_budget_constraint(x_solution[0], thetaVar_solution_mi, RandomRemoval=True)
         thetaVar_solution = [thetaVar_solution_mi[:][:] for _ in self.scenario_set]
 
         return thetaVar_solution
@@ -597,27 +599,61 @@ class ALNS:
 
         # --- Repair phase ---
         if binary_repair_action == "Add":
-            # Collect all (h,hprime) pairs where in scenario 0 the entry is 0
-            zeros_indices = [(h, hprime)
-                            for h in range(len(w_solution[0]))
-                            for hprime in range(len(w_solution[0][h]))
-                            if w_solution[0][h][hprime] == 0]
+            # Only consider eligible, non-self pairs that would not exceed bar{r}_{h'}
+            zeros_indices = []
+            inbound_count = {
+                hprime: sum(
+                    1 for h in self.Instance.HospitalSet
+                    if h != hprime
+                    and hprime in self.Instance.K_h.get(h, set())
+                    and w_solution[0][h][hprime] == 1
+                )
+                for hprime in self.Instance.HospitalSet
+            }
+            for h in self.Instance.HospitalSet:
+                for hprime in self.Instance.HospitalSet:
+                    if (
+                        h != hprime
+                        and w_solution[0][h][hprime] == 0
+                        and hprime in self.Instance.K_h.get(h, set())
+                        and inbound_count[hprime] < self.Instance.Max_Backup_Recipient_Hospital[hprime]
+                    ):
+                        zeros_indices.append((h, hprime))
             if zeros_indices:
                 to_change = random.sample(zeros_indices, min(len(zeros_indices), num_changes))
                 for h, hprime in to_change:
+                    # Re-check limit in case multiple adds target the same recipient
+                    if inbound_count[hprime] >= self.Instance.Max_Backup_Recipient_Hospital[hprime]:
+                        continue
                     for w in self.scenario_set:
                         w_solution[w][h][hprime] = 1
+                    inbound_count[hprime] += 1
 
         elif binary_repair_action == "Swap":
-            # Find all ones and zeros in the base slice
+            # Find all ones and eligible zeros that respect bar{r}_{h'}
             ones_indices = [(h, hprime)
                             for h in range(len(w_solution[0]))
                             for hprime in range(len(w_solution[0][h]))
-                            if w_solution[0][h][hprime] == 1]
-            zeros_indices = [(h, hprime)
-                            for h in range(len(w_solution[0]))
-                            for hprime in range(len(w_solution[0][h]))
-                            if w_solution[0][h][hprime] == 0]
+                            if w_solution[0][h][hprime] == 1 and h != hprime]
+            inbound_count = {
+                hprime: sum(
+                    1 for h in self.Instance.HospitalSet
+                    if h != hprime
+                    and hprime in self.Instance.K_h.get(h, set())
+                    and w_solution[0][h][hprime] == 1
+                )
+                for hprime in self.Instance.HospitalSet
+            }
+            zeros_indices = []
+            for h in self.Instance.HospitalSet:
+                for hprime in self.Instance.HospitalSet:
+                    if (
+                        h != hprime
+                        and w_solution[0][h][hprime] == 0
+                        and hprime in self.Instance.K_h.get(h, set())
+                        and inbound_count[hprime] < self.Instance.Max_Backup_Recipient_Hospital[hprime]
+                    ):
+                        zeros_indices.append((h, hprime))
 
             num_swaps = min(len(ones_indices), len(zeros_indices), num_changes)
             if num_swaps > 0:
@@ -667,6 +703,60 @@ class ALNS:
             self.operator_scores[r] = 0
         print(f"Updated operator weights: {self.operator_weights}")
 
+    def initial_temperature(self, initial_cost):
+        """
+        Derive the starting annealing temperature from the magnitude of the initial cost, so
+        that a degradation of 'SA_InitialAcceptanceDegradation' (relative) is accepted with
+        probability 'SA_InitialAcceptanceProbability':
+            exp(-delta / T0) = p  =>  T0 = -delta / ln(p)
+        """
+        reference_cost = abs(initial_cost)
+        if not math.isfinite(reference_cost) or reference_cost <= 0:
+            reference_cost = 1.0
+
+        delta = Constants.SA_InitialAcceptanceDegradation * reference_cost
+        probability = min(max(Constants.SA_InitialAcceptanceProbability, 1e-6), 1 - 1e-6)
+
+        return max(-delta / math.log(probability), Constants.SA_MinTemperature)
+
+    def cooling_rate_for(self, initial_temperature):
+        """
+        Geometric cooling rate that reaches 'SA_FinalTemperatureFraction * T0' after
+        MaxIterations iterations, so the schedule spans the whole run instead of collapsing
+        to a greedy search after a few dozen iterations.
+        """
+        nr_iterations = max(int(self.MaxIterations), 1)
+        final_fraction = min(max(Constants.SA_FinalTemperatureFraction, 1e-12), 1.0)
+
+        return final_fraction ** (1.0 / nr_iterations)
+
+    def compute_rl_reward(self, current_cost, new_cost, is_new_global_best, accepted):
+        """
+        Reward used for the RL/DRL operator selection.
+
+        It combines the classic ALNS sigma scores (new global best > accepted improving move >
+        accepted worsening move > rejected move) with the *relative* cost improvement, so the
+        signal stays in a small range instead of following the 1e6 magnitude of the objective.
+        """
+        reference_cost = abs(current_cost)
+        if not math.isfinite(reference_cost) or reference_cost <= 0:
+            reference_cost = 1.0
+
+        relative_improvement = (current_cost - new_cost) / reference_cost
+        # Keep the shaped part bounded, a single huge move should not dominate the Q-values.
+        relative_improvement = max(-1.0, min(1.0, relative_improvement))
+
+        if is_new_global_best:
+            sigma = Constants.RL_Sigma_NewGlobalBest
+        elif accepted and new_cost < current_cost:
+            sigma = Constants.RL_Sigma_AcceptedImproving
+        elif accepted:
+            sigma = Constants.RL_Sigma_AcceptedWorsening
+        else:
+            sigma = Constants.RL_Sigma_Rejected
+
+        return sigma + Constants.RL_Reward_ImprovementScale * relative_improvement
+
     def acceptance_check(self, new_cost, fixed_solution, T):
         """
         Check the acceptance criterion for the new solution using the Metropolis rule.
@@ -680,6 +770,8 @@ class ALNS:
         If accepted, self.best_cost and self.current_solution_x are updated.
         Returns True if the new solution is accepted, False otherwise.
         """
+        T = max(T, Constants.SA_MinTemperature)
+
         if new_cost < self.best_cost:
             print(f"New better solution accepted: {new_cost}")
             self.best_cost = new_cost
@@ -703,9 +795,9 @@ class ALNS:
 
     def Check_ACF_Establishment_Budget_Constraint(self, x_var_i, Rounded_x_var_row, RandomRemoval=False):
         """
-        Check the budget constraint for ACF establishment. If the sum exceeds the budget, 
-        remove the ACFs with the lowest x_var value one by one until the budget is met.
-        If RandomRemoval is True, ACFs will be removed randomly instead of based on their capacity.
+        Check the ACF-establishment component of the budget constraint.
+        If sum_i f_i x_i exceeds B, remove ACFs (lowest x_var, or randomly) until feasible.
+        Vehicle-assignment costs are enforced separately in check_total_budget_constraint.
         """
         # Calculate the initial sum of fixed costs
         total_cost = sum(self.Instance.Fixed_Cost_ACF_Constraint[i] * Rounded_x_var_row[i] for i in self.Instance.ACFSet)
@@ -747,6 +839,50 @@ class ALNS:
         
         # After modifying, if we still don't meet the budget, return the modified rounded x solution
         return Rounded_x_var_row
+
+    def check_total_budget_constraint(self, Rounded_x_var_row, Rounded_thetaVar_im, RandomRemoval=False):
+        """
+        Enforce sum_i f_i x_i + sum_{i,m} kappa_m^V theta_{im} <= B by reducing vehicle
+        assignments until the combined first-stage budget is feasible.
+        """
+        def compute_total_cost():
+            acf_cost = sum(
+                self.Instance.Fixed_Cost_ACF_Constraint[i] * Rounded_x_var_row[i]
+                for i in self.Instance.ACFSet
+            )
+            vehicle_cost = sum(
+                self.Instance.VehicleAssignment_Cost_Constraint[m] * Rounded_thetaVar_im[i][m]
+                for i in self.Instance.ACFSet
+                for m in self.Instance.RescueVehicleSet
+            )
+            return acf_cost + vehicle_cost
+
+        if compute_total_cost() <= self.Instance.Total_Budget_ACF_Establishment:
+            return Rounded_thetaVar_im
+
+        vehicle_assignments = [
+            (i, m)
+            for i in self.Instance.ACFSet
+            for m in self.Instance.RescueVehicleSet
+            if Rounded_thetaVar_im[i][m] > 0
+        ]
+
+        if RandomRemoval:
+            random.shuffle(vehicle_assignments)
+        else:
+            # Prefer reducing assignments at lower-capacity ACFs first
+            vehicle_assignments.sort(key=lambda im: self.Instance.ACF_Bed_Capacity[im[0]])
+
+        for i, m in vehicle_assignments:
+            while (
+                Rounded_thetaVar_im[i][m] > 0
+                and compute_total_cost() > self.Instance.Total_Budget_ACF_Establishment
+            ):
+                Rounded_thetaVar_im[i][m] -= 1
+            if compute_total_cost() <= self.Instance.Total_Budget_ACF_Establishment:
+                break
+
+        return Rounded_thetaVar_im
 
     def round_x_variable(self, x_var_i, RandomRemoval=False):
         """
@@ -806,12 +942,16 @@ class ALNS:
         Check the constraints for the land rescue vehicle allocation:
         1. Ensure that if an ACF is not established (x = 0), then no vehicles are assigned (thetaVar = 0).
         2. Ensure that the total number of vehicles assigned to each ACF does not exceed the available vehicles.
+        3. Ensure the combined ACF + vehicle-assignment budget constraint is respected.
         """
         # Step 1: Check the connection between x and thetaVar
         Rounded_thetaVar_im = self.check_connection_between_x_and_thetaVar(Rounded_ACFEstablishment_x_i, Rounded_thetaVar_im)
         
         # Step 2: Check and adjust the total number of vehicles assigned to each ACF
         Rounded_thetaVar_im = self.check_limited_number_of_rescue_vehicles(Rounded_thetaVar_im)
+
+        # Step 3: Enforce sum f_i x_i + sum kappa_m^V theta_im <= B
+        Rounded_thetaVar_im = self.check_total_budget_constraint(Rounded_ACFEstablishment_x_i, Rounded_thetaVar_im)
         
         return Rounded_thetaVar_im
 
@@ -840,14 +980,47 @@ class ALNS:
         
         return Rounded_w_hhprime
 
+    def Check_Max_Backup_Recipient_Constraint(self, Rounded_w_hhprime, RandomRemoval=False):
+        """
+        Enforce sum_{h : h' in K_h} w_{hh'} <= Max_Backup_Recipient_Hospital[h'] (bar{r}_{h'}).
+        Excess inbound designations to an oversubscribed recipient are deactivated.
+        """
+        for hprime in self.Instance.HospitalSet:
+            senders = [
+                h for h in self.Instance.HospitalSet
+                if h != hprime
+                and hprime in self.Instance.K_h.get(h, set())
+                and Rounded_w_hhprime[h][hprime] == 1
+            ]
+            limit = int(self.Instance.Max_Backup_Recipient_Hospital[hprime])
+            if len(senders) <= limit:
+                continue
+
+            excess = len(senders) - limit
+            if RandomRemoval:
+                random.shuffle(senders)
+            else:
+                # Prefer dropping higher-coordination-cost arrangements first
+                senders.sort(
+                    key=lambda h: float(self.Instance.CoordinationCost[h][hprime]),
+                    reverse=True
+                )
+
+            for h in senders[:excess]:
+                Rounded_w_hhprime[h][hprime] = 0
+
+        return Rounded_w_hhprime
+
     def round_w_variable(self, w_var_hhprime):
         """
-        Rounds each value in a 3D variable using math.ceil and checks the hospital compatibility constraint.
+        Rounds each value in a 3D variable using math.ceil and checks backup
+        compatibility and inbound recipient-limit constraints.
         """
         Rounded_w_hhprime = [[math.ceil(val) for val in inner] for inner in w_var_hhprime]
 
         # Now, call the Check_Hospitals_Compatibility_Constraint method to ensure compatibility
         Rounded_w_hhprime = self.Check_Hospitals_Compatibility_Constraint(Rounded_w_hhprime)
+        Rounded_w_hhprime = self.Check_Max_Backup_Recipient_Constraint(Rounded_w_hhprime)
         
         return Rounded_w_hhprime
 
@@ -878,9 +1051,10 @@ class ALNS:
             # else leave the row as zeros
 
         # 3) One raw w-matrix (num_hosp × num_hosp), binary {0,1}
+        # Only sample eligible backup pairs (h' in K_h); round_w later enforces bar{r}_{h'}
         for h in self.Instance.HospitalSet:
             for hprime in self.Instance.HospitalSet:
-                if h != hprime:
+                if h != hprime and hprime in self.Instance.K_h.get(h, set()):
                     raw_w0[h][hprime] = rng.randint(0, 1)
 
         # --- replicate into each scenario ---
@@ -964,9 +1138,10 @@ class ALNS:
 
         print(f"Initial solution cost: {self.best_cost}")
 
-        # Initialize parameters for Simulated Annealing
-        T = 1000.0           # Initial annealing temperature (adjust as needed)
-        cooling_rate = 0.95  # Cooling rate (e.g., 0.99, adjust as needed)
+        # Initialize parameters for Simulated Annealing (scaled to the cost of this instance)
+        T = self.initial_temperature(self.best_cost)
+        cooling_rate = self.cooling_rate_for(T)
+        print(f"Initial annealing temperature: {T:.4f}, cooling rate: {cooling_rate:.6f}")
 
         # Step 3: ALNS iterations
         self.CurrentIteration = 1
@@ -1010,24 +1185,13 @@ class ALNS:
             fixed_solution = self.solve_fixed_mip()
             new_cost = copy.deepcopy(fixed_solution.GRBCost)
 
-            # --- RL Update or Operator Score Update ---
-            if self.use_RL:
-                new_state = self.get_state_from_solution(modified_solution_x[0], modified_solution_thetaVar[0], modified_solution_w[0])
-                reward = self.best_cost - new_cost
-                if isinstance(self.RL_Agent, DQLAgent):
-                    done = False  # Set to True if the episode ends, otherwise False
-                    self.RL_Agent.update_q_value(old_state, combined_action, reward, new_state, done)
-                else:
-                    self.RL_Agent.update_q_value(old_state, combined_action, reward, new_state)
-            else:
-                # Update operator score for roulette selection if improvement is observed.
-                reward = self.best_cost - new_cost
-                if reward > 0:
-                    self.operator_scores[combined_action] += reward
+            # Cost of the solution the search currently sits on, before the acceptance decision.
+            current_cost = self.best_cost
 
             # --- Acceptance Criterion Using Metropolis (Simulated Annealing) ---
             # Update global best if the new solution is strictly better.
-            if new_cost < self.global_best_cost:
+            is_new_global_best = new_cost < self.global_best_cost
+            if is_new_global_best:
                 print(f"New global best cost found: {new_cost}")
                 self.global_best_cost = new_cost
                 self.global_best_solution = fixed_solution
@@ -1035,13 +1199,40 @@ class ALNS:
             else:
                 no_improv_iters += 1
 
+            # Decide whether the new solution is accepted for further exploration. This has to
+            # happen before the learning update, because the next state of the search is the
+            # solution we actually move to (the neighbor if accepted, the incumbent otherwise).
+            accepted = self.acceptance_check(new_cost, fixed_solution, T)
+
+            # --- RL Update or Operator Score Update ---
+            if self.use_RL:
+                if accepted:
+                    next_state = self.get_state_from_solution(self.current_solution_x[0],
+                                                             self.current_solution_thetaVar[0],
+                                                             self.current_solution_w[0])
+                else:
+                    next_state = old_state
+
+                reward = self.compute_rl_reward(current_cost, new_cost, is_new_global_best, accepted)
+
+                if isinstance(self.RL_Agent, DQLAgent):
+                    # This transition is terminal when the search is about to stop.
+                    done = (no_improv_iters >= Constants.max_no_improv
+                            or self.CurrentIteration >= self.MaxIterations
+                            or (time.time() - self.StartTime_ALNS) >= Constants.AlgorithmTimeLimit)
+                    self.RL_Agent.update_q_value(old_state, combined_action, reward, next_state, done)
+                else:
+                    self.RL_Agent.update_q_value(old_state, combined_action, reward, next_state)
+            else:
+                # Update operator score for roulette selection if improvement is observed.
+                reward = current_cost - new_cost
+                if reward > 0:
+                    self.operator_scores[combined_action] += reward
+
             # Optionally print when hitting the no‐improv threshold
             if no_improv_iters >= Constants.max_no_improv:
                 print(f"No improvement in {Constants.max_no_improv} iterations. Stopping ALNS.")
                 break 
-
-            # Use the acceptance_check method to decide whether to accept the new solution for further exploration.
-            self.acceptance_check(new_cost, fixed_solution, T)
 
             # Log iteration details including elapsed time
             trace_message = (

@@ -101,6 +101,9 @@ class MIPSolver(object):
         self.MaxBackupConstraintNR = [[None for _ in self.Instance.HospitalSet]
                                             for _ in self.ScenarioSet]
 
+        self.MaxBackupRecipientConstraintNR = [[None for _ in self.Instance.HospitalSet]
+                                                    for _ in self.ScenarioSet]
+
         self.TotalBudgetConstraintNR = [None for _ in self.ScenarioSet]
 
         self.LandVehicleAssignmentConstraintNR = [[None for _ in self.Instance.RescueVehicleSet] 
@@ -588,6 +591,34 @@ class MIPSolver(object):
                 constraint_name = f"MaxBackup_w_{w}_h_{h}"
                 constraint = self.LocAloc.addConstr(LeftHandSide >= RightHandSide, name=constraint_name)
                 self.MaxBackupConstraintNR[w][h] = constraint
+
+    def CreateMaxBackupRecipientConstraint(self):
+        """
+        First-stage inbound backup limit:
+            sum_{h : h' in K_h} w_{hh'} <= Max_Backup_Recipient_Hospital[h']
+        for each receiving hospital h'.
+        """
+        for w in self.ScenarioSet:
+            for hprime in self.Instance.HospitalSet:
+                senders = [
+                    h for h in self.Instance.HospitalSet
+                    if h != hprime and hprime in self.Instance.K_h.get(h, set())
+                ]
+                if not senders:
+                    continue
+
+                vars_W = [self.GetIndexBackupHospitalVariable(w, h, hprime) for h in senders]
+                coeff_W = [-1.0 for _ in senders]
+
+                LeftHandSide_W = gp.quicksum(
+                    coeff_W[i] * self.BackupHospital_Var[vars_W[i]] for i in range(len(vars_W))
+                )
+                LeftHandSide = LeftHandSide_W
+                RightHandSide = -1.0 * self.Instance.Max_Backup_Recipient_Hospital[hprime]
+
+                constraint_name = f"MaxBackupRecipient_w_{w}_hprime_{hprime}"
+                constraint = self.LocAloc.addConstr(LeftHandSide >= RightHandSide, name=constraint_name)
+                self.MaxBackupRecipientConstraintNR[w][hprime] = constraint
     
     def CreateTotalBudgetConstraint(self):
         for w in self.ScenarioSet:
@@ -596,9 +627,20 @@ class MIPSolver(object):
             coeff_x = [-1.0 * self.Instance.Fixed_Cost_ACF_Constraint[i]
                         for i in self.Instance.ACFSet]
 
+            vars_thetaVar = [self.GetIndexLandRescueVehicleVariable(w, i, m)
+                                for i in self.Instance.ACFSet
+                                for m in self.Instance.RescueVehicleSet]
+            coeff_thetaVar = [-1.0 * self.Instance.VehicleAssignment_Cost_Constraint[m]
+                                for i in self.Instance.ACFSet
+                                for m in self.Instance.RescueVehicleSet]
+
             ############ Create the left-hand side of the constraint       
-            LeftHandSide_x = gp.quicksum(coeff_x[i] * self.ACFEstablishment_Var[vars_x[i]] for i in range(len(vars_x)))        
-            LeftHandSide = LeftHandSide_x
+            LeftHandSide_x = gp.quicksum(coeff_x[i] * self.ACFEstablishment_Var[vars_x[i]] for i in range(len(vars_x)))
+            LeftHandSide_thetaVar = gp.quicksum(
+                coeff_thetaVar[k] * self.LandRescueVehicle_Var[vars_thetaVar[k]]
+                for k in range(len(vars_thetaVar))
+            )
+            LeftHandSide = LeftHandSide_x + LeftHandSide_thetaVar
             
             ############ Define the right-hand side (RHS) of the constraint
             RightHandSide = -1.0 * self.Instance.Total_Budget_ACF_Establishment
@@ -868,7 +910,7 @@ class MIPSolver(object):
                     LeftHandSide = LeftHandSide_zeta
                     
                     ############ Define the right-hand side (RHS) of the constraint
-                    RightHandSide = (1 - self.DemandScenarioTree.HospitalDisruption[w][h]) * -1.0 * self.Instance.Hospital_Bed_Capacity[h]
+                    RightHandSide = (1 - self.DemandScenarioTree.HospitalDisruption[w][h]) * -1.0 * self.DemandScenarioTree.HospitalTreatmentCapacity[w][h]
 
                     ############ Add the constraint to the model
                     constraint_name = f"MaxHospitalCap_w_{w}_t_{t}_h_{h}"
@@ -1102,7 +1144,7 @@ class MIPSolver(object):
                         LeftHandSide = LeftHandSide_q + LeftHandSide_u_L_Hos + LeftHandSide_u_A + LeftHandSide_u_L_ACF
                         
                         ############ Define the right-hand side (RHS) of the constraint
-                        RightHandSide = -1.0 * self.Instance.Land_Rescue_Vehicle_Capacity[m] * self.Instance.Number_Land_Rescue_Vehicle_Hospital[m][h] 
+                        RightHandSide = -1.0 * self.Instance.Land_Rescue_Vehicle_Capacity_Time[m] * self.Instance.Number_Land_Rescue_Vehicle_Hospital[m][h] 
 
                         ############ Add the constraint to the model
                         constraint_name = f"LandResVehicleCapHos_w_{w}_t_{t}_h_{h}_m_{m}"
@@ -1123,7 +1165,7 @@ class MIPSolver(object):
                                     for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][self.Instance.NrHospitals + i] == 1]
                                                                     
                         vars_thetaVar = [self.GetIndexLandRescueVehicleVariable(w, i, m)]
-                        coeff_thetaVar = [+1.0 * self.Instance.Land_Rescue_Vehicle_Capacity[m]]
+                        coeff_thetaVar = [+1.0 * self.Instance.Land_Rescue_Vehicle_Capacity_Distance[m]]
 
                         ############ Create the left-hand side of the constraint
                         LeftHandSide_q = gp.quicksum(coeff_q[i] * self.CasualtyTransfer_Var[vars_q[i]] for i in range(len(vars_q)))                    
@@ -1160,7 +1202,7 @@ class MIPSolver(object):
                         LeftHandSide = LeftHandSide_u_A
                         
                         ############ Define the right-hand side (RHS) of the constraint
-                        RightHandSide = -1.0 * self.Instance.Aerial_Rescue_Vehicle_Capacity[0] * self.Instance.Available_Aerial_Vehicles_Hospital[h] 
+                        RightHandSide = -1.0 * self.Instance.Aerial_Rescue_Vehicle_Capacity_Time[0] * self.Instance.Available_Aerial_Vehicles_Hospital[h] 
 
                         ############ Add the constraint to the model
                         constraint_name = f"AerialResVehicleCap_w_{w}_t_{t}_h_{h}"
@@ -1190,7 +1232,7 @@ class MIPSolver(object):
                                         for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][h] == 1]
 
                             vars_W = [self.GetIndexBackupHospitalVariable(w, h, hprime)]
-                            coeff_W = [+1.0 * self.Instance.Hospital_Bed_Capacity[hprime]]
+                            coeff_W = [+1.0 * self.DemandScenarioTree.HospitalTreatmentCapacity[w][hprime]]
                                                                                     
             
                             ############ Create the left-hand side of the constraint
@@ -1733,6 +1775,7 @@ class MIPSolver(object):
         if Constants.Debug: print("\n We are in 'MIPSolver' Class -- CreateConstraints")
 
         #self.CreateMaxBackupConstraint()
+        self.CreateMaxBackupRecipientConstraint()
         self.CreateTotalBudgetConstraint()
         self.CreateLandVehicleAssignmentConstraint()
         self.CreateVehicleACFConnectionConstraint()
@@ -2289,7 +2332,7 @@ class MIPSolver(object):
             for t_idx, t in enumerate(self.Instance.TimeBucketSet):
                 for h_idx, h in enumerate(self.Instance.HospitalSet):
                     # Calculate the new right-hand side for the constraint
-                    righthandside = (1 - self.Scenarios[w].HospitalDisruption[h]) * -1.0 * self.Instance.Hospital_Bed_Capacity[h]
+                    righthandside = (1 - self.Scenarios[w].HospitalDisruption[h]) * -1.0 * self.Scenarios[w].HospitalTreatmentCapacity[h]
                     # Retrieve the constraint reference
                     constr_ref = self.MaxHospitalCapConstraintNR[w_idx][t_idx][h_idx]
                     # Update the RHS of the constraint
@@ -2454,7 +2497,7 @@ class MIPSolver(object):
                         LeftHandSide = LeftHandSide_q + LeftHandSide_u_L_Hos + LeftHandSide_u_A + LeftHandSide_u_L_ACF
                         
                         ############ Define the right-hand side (RHS) of the constraint
-                        RightHandSide = -1.0 * self.Instance.Land_Rescue_Vehicle_Capacity[m] * self.Instance.Number_Land_Rescue_Vehicle_Hospital[m][h] 
+                        RightHandSide = -1.0 * self.Instance.Land_Rescue_Vehicle_Capacity_Time[m] * self.Instance.Number_Land_Rescue_Vehicle_Hospital[m][h] 
 
                         ############ Add the constraint to the model
                         constraint_name = f"LandResVehicleCapHos_w_{w}_t_{t}_h_{h}_m_{m}"
@@ -2486,12 +2529,50 @@ class MIPSolver(object):
                         LeftHandSide = LeftHandSide_u_A
                         
                         ############ Define the right-hand side (RHS) of the constraint
-                        RightHandSide = -1.0 * self.Instance.Aerial_Rescue_Vehicle_Capacity[0] * self.Instance.Available_Aerial_Vehicles_Hospital[h] 
+                        RightHandSide = -1.0 * self.Instance.Aerial_Rescue_Vehicle_Capacity_Time[0] * self.Instance.Available_Aerial_Vehicles_Hospital[h] 
 
                         ############ Add the constraint to the model
                         constraint_name = f"AerialResVehicleCap_w_{w}_t_{t}_h_{h}"
                         constraint = self.LocAloc.addConstr(LeftHandSide >= RightHandSide, name=constraint_name)
                         self.AerialResVehicleCapConstraintNR[w][t][h] = constraint
+
+    def UpdateEvacuationBackupConnectionConstraint(self):
+        for w in self.ScenarioSet:
+            for t in self.Instance.TimeBucketSet:
+                for h in self.Instance.HospitalSet:
+                    for hprime in self.Instance.HospitalSet:
+                        if h != hprime:
+                            if self.EvacuationBackupConnectionConstraintNR[w][t][h][hprime] is not None:
+                                self.LocAloc.remove(self.EvacuationBackupConnectionConstraintNR[w][t][h][hprime])
+
+                            vars_u_L_Hos = [self.GetIndexLandEvacuatedPatientsVariables(w, t, j, h, hprime, m)
+                                            for m in self.Instance.RescueVehicleSet
+                                            for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][h] == 1]
+                            coeff_u_L_Hos = [-1.0
+                                            for m in self.Instance.RescueVehicleSet
+                                            for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][h] == 1]
+
+                            vars_u_A = [self.GetIndexAerialEvacuatedPatientsVariables(w, t, j, h, i, hprime, m)
+                                        for m in self.Instance.RescueVehicleSet
+                                        for i in self.Instance.ACFSet if i in self.Instance.I_A_Set
+                                        for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][h] == 1]
+                            coeff_u_A = [-1.0
+                                        for m in self.Instance.RescueVehicleSet
+                                        for i in self.Instance.ACFSet if i in self.Instance.I_A_Set
+                                        for j in self.Instance.InjuryLevelSet if self.Instance.J_u[j][h] == 1]
+
+                            vars_W = [self.GetIndexBackupHospitalVariable(w, h, hprime)]
+                            coeff_W = [+1.0 * self.Scenarios[w].HospitalTreatmentCapacity[hprime]]
+
+                            LeftHandSide_u_L_Hos = gp.quicksum(coeff_u_L_Hos[i] * self.LandEvacuatedPatients_Var[vars_u_L_Hos[i]] for i in range(len(vars_u_L_Hos)))
+                            LeftHandSide_u_A = gp.quicksum(coeff_u_A[i] * self.AerialEvacuatedPatients_Var[vars_u_A[i]] for i in range(len(vars_u_A)))
+                            LeftHandSide_W = gp.quicksum(coeff_W[i] * self.BackupHospital_Var[vars_W[i]] for i in range(len(vars_W)))
+                            LeftHandSide = LeftHandSide_u_L_Hos + LeftHandSide_u_A + LeftHandSide_W
+
+                            RightHandSide = 0
+                            constraint_name = f"EvacuationBackupConnection_w_{w}_t_{t}_h_{h}_h'_{hprime}"
+                            constraint = self.LocAloc.addConstr(LeftHandSide >= RightHandSide, name=constraint_name)
+                            self.EvacuationBackupConnectionConstraintNR[w][t][h][hprime] = constraint
 
     def ModifyMipForScenarioTree(self, scenariotree):
         if Constants.Debug: print("\n We are in 'MIPSolver' Class -- ModifyMipForScenarioTree")
@@ -2514,6 +2595,7 @@ class MIPSolver(object):
         self.UpdateDischargedACFConstraint()
         self.UpdateLandResVehicleCapHosConstraint()
         self.UpdateAerialResVehicleCapConstraint()
+        self.UpdateEvacuationBackupConnectionConstraint()
 
         self.LocAloc.update()   
     

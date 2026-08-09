@@ -3,13 +3,15 @@ class Scenario:
                  casualtyDemand, 
                  hospitalDisruption, 
                  patientDemand, 
-                 patientDischargedPercentage, 
+                 patientDischargedPercentage,
+                 hospitalTreatmentCapacity,
                  **attributes):
         
         self.CasualtyDemand = casualtyDemand  # Assign the specific casualtyDemand matrix for the scenario
         self.HospitalDisruption = hospitalDisruption  # Assign the specific hospitalDisruption matrix for the scenario
         self.PatientDemand = patientDemand  # Assign the specific patientDemand matrix for the scenario
         self.PatientDischargedPercentage = patientDischargedPercentage  # Assign the specific patientDischargedPercentage matrix for the scenario
+        self.HospitalTreatmentCapacity = hospitalTreatmentCapacity  # Assign the specific hospital treatment capacity for the scenario
         
         # Dynamically copy all other attributes
         for key, value in attributes.items():

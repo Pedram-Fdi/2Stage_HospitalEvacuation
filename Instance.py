@@ -39,6 +39,14 @@ class Instance(object):
         self.Working_Hours_per_Day = 12;                # working Hours for vehicles 
         self.Number_of_Planning_Days = 0.5;               # Each period is 12h (It should be always a multiplier of a day since I will use it in risk parameters too)
 
+        # Patients carried per trip by each land vehicle type: m=0 advanced ambulance,
+        # m=1 basic ambulance, m=2 ambus. Ref for the ambus: (Decision support for
+        # hospital evacuation and emergency response) and (https://txemtf.org/avada_portfolio/ambus/)
+        self.RescueVehicle_Seats = [1, 2, 20]
+        self.RescueVehicle_Speed = [self.Speed_Land, self.Speed_Land, self.Speed_Land_AmBus]
+        self.AerialVehicle_Seats = 10                   # Ref: (A bi-objective robust optimization model for disaster response planning under uncertainties)
+        self.RoundTrip_Factor = 0.5                     # Every delivery trip is followed by an empty return leg
+
 
         #Domain of Parameters
         self.Min_ACF_Bed_Capacity = 250
@@ -49,6 +57,8 @@ class Instance(object):
 
         self.Min_VehicleAssignment_Cost = 0.001
         self.Max_VehicleAssignment_Cost = 0.001
+        # kappa_m^V for budget constraint (m=0,1,2 <-> vehicle types 1,2,3)
+        self.VehicleAssignment_Cost_Constraint_Values = list(Constants.VehicleAssignment_Cost_Constraint)
 
         self.Min_Demand_in_Each_Location = 0 * self.Number_of_Planning_Days
         self.Max_Demand_in_Each_Location = 100 * self.Number_of_Planning_Days
@@ -62,7 +72,10 @@ class Instance(object):
         self.Do_you_need_point_plot = 0
 
         self.Min_Hospital_Bed_Capacity = 400
-        self.Max_Hospital_Bed_Capacity = 600        
+        self.Max_Hospital_Bed_Capacity = 600
+        # Coefficient of variation for scenario-dependent hospital treatment capacity
+        # (sampled uniformly in [avg - std, avg + std] with std = CV * avg)
+        self.HospitalTreatmentCapacity_CV = 0.10
 
 
         self.Min_Casualty_Shortage_Cost = 150000
@@ -70,8 +83,10 @@ class Instance(object):
 
         self.HighPriority_EvacuationRiskCost = 100000   
 
-        self.Safety_Factor_Rescue_Vehicle_ACF = 3           # (Default for non-case: 5) For having 0 Shortage (For demand between [50,200], its defaul is on 3)
-        self.Safety_Factor_Rescue_Vehicle_Hospital = 4      #For having 0 Shortage (For demand between [50,200], its defaul is on 1.5)
+        # Fleets are sized against the upper end of the demand interval (average + standard
+        # deviation), so these factors only cover routing detours away from the nearest facility.
+        self.Safety_Factor_Rescue_Vehicle_ACF = 1.5
+        self.Safety_Factor_Rescue_Vehicle_Hospital = 1.5
 
         self.MinHospitalOccupationRate = 0.50                 # (Accurate for Turkey: 55.3% Ref:https://www.statista.com/statistics/1116612/oecd-hospital-acute-care-occupancy-rates-select-countries-worldwide/) or Accurate: 69.8% Ref: https://www.oecd.org/en/publications/health-at-a-glance-2023_7a7afb35-en/full-report/hospital-beds-and-occupancy_10add5df.html
         self.MaxHospitalOccupationRate = 0.60                 # (Accurate for Turkey: 55.3% Ref:https://www.statista.com/statistics/1116612/oecd-hospital-acute-care-occupancy-rates-select-countries-worldwide/) or (Accurate: 69.8% Ref: https://www.oecd.org/en/publications/health-at-a-glance-2023_7a7afb35-en/full-report/hospital-beds-and-occupancy_10add5df.html
@@ -90,10 +105,14 @@ class Instance(object):
         self.Fixed_Cost_ACF_Constraint = []
         self.Total_Budget_ACF_Establishment = []
         self.VehicleAssignment_Cost = []
+        self.VehicleAssignment_Cost_Constraint = []  # kappa_m^V used in the first-stage budget constraint
         self.ForecastedAvgCasualtyDemand = []
         self.ForecastedSTDCasualtyDemand = []
-        self.Land_Rescue_Vehicle_Capacity = []
+        self.Land_Rescue_Vehicle_Capacity = []           # Nominal patients per period at the reference trip length (reporting only)
+        self.Land_Rescue_Vehicle_Capacity_Distance = []  # Patient-kilometres per period, used by the ACF vehicle-capacity constraint
+        self.Land_Rescue_Vehicle_Capacity_Time = []      # Patient-minutes per period, used by the hospital vehicle-capacity constraint
         self.Aerial_Rescue_Vehicle_Capacity = []
+        self.Aerial_Rescue_Vehicle_Capacity_Time = []    # Patient-minutes per period, used by the aerial vehicle-capacity constraint
         self.DisasterArea_Position = []
         self.ACF_Position = []
         self.Hospital_Position = []
@@ -119,11 +138,14 @@ class Instance(object):
         self.Number_Land_Rescue_Vehicle_Hospital = []
         self.ForecastedAvgHospitalDisruption = []
         self.ForecastedSTDHospitalDisruption = []
+        self.ForecastedAvgHospitalTreatmentCapacity = []
+        self.ForecastedSTDHospitalTreatmentCapacity = []
         self.ForecastedAvgPatientDemand = []
         self.ForecastedSTDPatientDemand = []
         self.ForecastedAvgPercentagePatientDischarged = []
         self.ForecastedSTDPercentagePatientDischarged = []
         self.Max_Backup_Hospital = []
+        self.Max_Backup_Recipient_Hospital = []  # bar{r}_{h'}: max inbound backup designations to h'
         self.Available_Aerial_Vehicles_Hospital = []
         self.CoordinationCost = []
         self.EvacuationRiskCost = []
@@ -229,26 +251,20 @@ class Instance(object):
             New_Fixed_Cost_ACF_Constraint = math.floor(1000 * New_Fixed_Cost_ACF_Constraint) / 1000
             self.Fixed_Cost_ACF_Constraint.append(New_Fixed_Cost_ACF_Constraint)
 
-        ################################## Generate Available Budget for ACFs
-        Total_Required_Budget_for_ACF_Establishment = 0
-        for i in self.ACFSet:
-            Total_Required_Budget_for_ACF_Establishment += self.Fixed_Cost_ACF_Constraint[i]
-        # Use budget multiplier from Constants (can be set per instance for sensitivity analysis)
-        budget_multiplier_numerator = getattr(self, 'ACFBudget_Multiplier_Numerator', Constants.ACFBudget_Multiplier_Numerator)
-        budget_multiplier_denominator = Constants.ACFBudget_Multiplier_Denominator
-        Total_Required_Budget_for_ACF_Establishment = ((Total_Required_Budget_for_ACF_Establishment * budget_multiplier_numerator) / budget_multiplier_denominator)
-        Max_Required_Budget_for_ACF_Establishment = max(self.Fixed_Cost_ACF_Constraint)
-        print("Total_Required_Budget_for_ACF_Establishment: ", Total_Required_Budget_for_ACF_Establishment)
-        print("Max_Required_Budget_for_ACF_Establishment: ", Max_Required_Budget_for_ACF_Establishment)
-        print(f"Budget Multiplier Used: {budget_multiplier_numerator}/{budget_multiplier_denominator}")
-        
-        self.Total_Budget_ACF_Establishment = max(Total_Required_Budget_for_ACF_Establishment, Max_Required_Budget_for_ACF_Establishment)   # The total available budget to establish ACFs*/
-        
-        ################################## Generate VehicleAssignment_Cost       
-        for m in self.RescueVehicleSet:  
+        ################################## Generate VehicleAssignment_Cost (objective) and kappa_m^V (constraint)
+        self.VehicleAssignment_Cost = []
+        self.VehicleAssignment_Cost_Constraint = []
+        for m in self.RescueVehicleSet:
             New_VehicleAssignment_Cost = random.uniform(self.Min_VehicleAssignment_Cost, self.Max_VehicleAssignment_Cost)
             New_VehicleAssignment_Cost = math.floor(1000 * New_VehicleAssignment_Cost) / 1000
             self.VehicleAssignment_Cost.append(New_VehicleAssignment_Cost)
+
+            # kappa_m^V: fixed vehicle-assignment cost for the budget constraint
+            if m < len(self.VehicleAssignment_Cost_Constraint_Values):
+                kappa_m_V = self.VehicleAssignment_Cost_Constraint_Values[m]
+            else:
+                kappa_m_V = self.VehicleAssignment_Cost_Constraint_Values[-1]
+            self.VehicleAssignment_Cost_Constraint.append(kappa_m_V)
 
         ##################################  Calculating Forecasted Average Demand
         self.ForecastedAvgCasualtyDemand = np.zeros((len(self.TimeBucketSet), len(self.InjuryLevelSet), len(self.DisasterAreaSet)))
@@ -288,34 +304,12 @@ class Instance(object):
             else:
                 #total_bed = random.randint(self.Min_Hospital_Bed_Capacity, self.Max_Hospital_Bed_Capacity)
                 total_bed = random.randint(self.Min_Hospital_Bed_Capacity, self.Max_Hospital_Bed_Capacity)
-                self.Hospital_Bed_Capacity[h] = total_bed   
+                self.Hospital_Bed_Capacity[h] = total_bed
 
+        self.set_forecasted_hospital_treatment_capacity()
 
-        ##################################  Calculating Land Rescue Vehicle Capacity
-
-        a = (self.Square_Dimension / 2)
-        nominal_Land_Rescue_Vehicle_Capacity = math.floor(0.5 * (self.Speed_Land / a) * self.Working_Hours_per_Day * self.Number_of_Planning_Days)    # Approximate number of patients transferred in the planning Horizon (Ex: 1 week)
-        nominal_Land_Rescue_Vehicle_Capacity_Ambus = math.floor(0.5 * (self.Speed_Land_AmBus / a) * self.Working_Hours_per_Day * self.Number_of_Planning_Days)    # Approximate number of patients transferred in the planning Horizon (Ex: 1 week)
-        
-        for m in self.RescueVehicleSet:  # Assuming Number_Vehicle_Mode means there are four modes (0 to 3)
-            new_Land_Rescue_Vehicle_Capacity = 0
-            if m == 0:
-                new_Land_Rescue_Vehicle_Capacity = 1 * nominal_Land_Rescue_Vehicle_Capacity
-            elif m == 1:
-                new_Land_Rescue_Vehicle_Capacity = 2 * nominal_Land_Rescue_Vehicle_Capacity
-            elif m == 2:
-                new_Land_Rescue_Vehicle_Capacity = 20 * nominal_Land_Rescue_Vehicle_Capacity_Ambus      ## REf: (Decision support for hospital evacuation and emergency response) and (https://txemtf.org/avada_portfolio/ambus/)
-            elif m >= 3:
-                print("\nThe number of Vehicles (index m) cannot be more than 3!!!!!!!!!\n")
-                input("Press Enter to continue...")  # system("Pause") equivalent in Python
-            self.Land_Rescue_Vehicle_Capacity.append(new_Land_Rescue_Vehicle_Capacity)
-        
-        ##################################  Calculating Aerial Rescue Vehicle Capacity
-
-        a = (self.Square_Dimension / 2)
-        nominal_Aerial_Rescue_Vehicle_Capacity = math.floor(0.5 * (self.Speed_Aerial / a) * self.Working_Hours_per_Day * self.Number_of_Planning_Days)    # Approximate number of patients transferred in the planning Horizon (Ex: 1 week)
-        new_Aerial_Rescue_Vehicle_Capacity = 10 * nominal_Aerial_Rescue_Vehicle_Capacity        ## Ref: (A bi-objective robust optimization model for disaster response planning under uncertainties)
-        self.Aerial_Rescue_Vehicle_Capacity.append(new_Aerial_Rescue_Vehicle_Capacity)
+        ##################################  Calculating Rescue Vehicle Capacities
+        self.compute_rescue_vehicle_capacities()
 
         ##################################  Calculating Distances
 
@@ -373,6 +367,9 @@ class Instance(object):
         ##################################  Calculating Number of Land Rescue Vehicles that can be assigned to each ACF
         self.Number_Rescue_Vehicle_ACF = self.allocate_rescue_vehicles()
 
+        ################################## Generate Available Budget for ACFs + vehicle assignment
+        self.Total_Budget_ACF_Establishment = self.compute_total_budget_acf_establishment()
+
         ##################################  Calculating Number_Land_Rescue_Vehicle_Hospital
         self.Number_Land_Rescue_Vehicle_Hospital = self.allocate_hospital_rescue_vehicles()
 
@@ -415,7 +412,10 @@ class Instance(object):
 
         ################################## Maximum Backup Hospital
         for h in self.HospitalSet:
-            self.Max_Backup_Hospital.append((self.NrHospitals - 1)) 
+            self.Max_Backup_Hospital.append((self.NrHospitals - 1))
+
+        ################################## Maximum Backup Recipient Hospital (bar{r}_{h'})
+        self.Max_Backup_Recipient_Hospital = self.allocate_max_backup_recipient_hospital()
 
         ##################################  Calculating Available Aerial Vehicles
         self.Available_Aerial_Vehicles_Hospital = np.zeros((len(self.HospitalSet)))
@@ -542,26 +542,20 @@ class Instance(object):
             New_Fixed_Cost_ACF_Constraint = math.floor(1000 * New_Fixed_Cost_ACF_Constraint) / 1000
             self.Fixed_Cost_ACF_Constraint.append(New_Fixed_Cost_ACF_Constraint)
 
-        ################################## Generate Available Budget for ACFs
-        Total_Required_Budget_for_ACF_Establishment = 0
-        for i in self.ACFSet:
-            Total_Required_Budget_for_ACF_Establishment += self.Fixed_Cost_ACF_Constraint[i]
-        # Use budget multiplier from Constants (can be set per instance for sensitivity analysis)
-        budget_multiplier_numerator = getattr(self, 'ACFBudget_Multiplier_Numerator', Constants.ACFBudget_Multiplier_Numerator)
-        budget_multiplier_denominator = Constants.ACFBudget_Multiplier_Denominator
-        Total_Required_Budget_for_ACF_Establishment = ((Total_Required_Budget_for_ACF_Establishment * budget_multiplier_numerator) / budget_multiplier_denominator)
-        Max_Required_Budget_for_ACF_Establishment = max(self.Fixed_Cost_ACF_Constraint)
-        print("Total_Required_Budget_for_ACF_Establishment: ", Total_Required_Budget_for_ACF_Establishment)
-        print("Max_Required_Budget_for_ACF_Establishment: ", Max_Required_Budget_for_ACF_Establishment)
-        print(f"Budget Multiplier Used: {budget_multiplier_numerator}/{budget_multiplier_denominator}")
-        
-        self.Total_Budget_ACF_Establishment = max(Total_Required_Budget_for_ACF_Establishment, Max_Required_Budget_for_ACF_Establishment)   # The total available budget to establish ACFs*/
-        
-        ################################## Generate VehicleAssignment_Cost       
-        for m in self.RescueVehicleSet:  
+        ################################## Generate VehicleAssignment_Cost (objective) and kappa_m^V (constraint)
+        self.VehicleAssignment_Cost = []
+        self.VehicleAssignment_Cost_Constraint = []
+        for m in self.RescueVehicleSet:
             New_VehicleAssignment_Cost = random.uniform(self.Min_VehicleAssignment_Cost, self.Max_VehicleAssignment_Cost)
             New_VehicleAssignment_Cost = math.floor(1000 * New_VehicleAssignment_Cost) / 1000
             self.VehicleAssignment_Cost.append(New_VehicleAssignment_Cost)
+
+            # kappa_m^V: fixed vehicle-assignment cost for the budget constraint
+            if m < len(self.VehicleAssignment_Cost_Constraint_Values):
+                kappa_m_V = self.VehicleAssignment_Cost_Constraint_Values[m]
+            else:
+                kappa_m_V = self.VehicleAssignment_Cost_Constraint_Values[-1]
+            self.VehicleAssignment_Cost_Constraint.append(kappa_m_V)
 
         ##################################  Calculating Forecasted Average Casualty Demand
         if self.NrDisasterAreas == 94:
@@ -856,31 +850,10 @@ class Instance(object):
             # Assign hospital capacities from the Excel sheet
             self.Hospital_Bed_Capacity[h] = hospital_capacities[h]
 
-        ##################################  Calculating Land Rescue Vehicle Capacity
+        self.set_forecasted_hospital_treatment_capacity()
 
-        a = (self.Square_Dimension / 2)
-        nominal_Land_Rescue_Vehicle_Capacity = math.floor(0.5 * (self.Speed_Land / a) * self.Working_Hours_per_Day * self.Number_of_Planning_Days)    # Approximate number of patients transferred in the planning Horizon (Ex: 1 week)
-        nominal_Land_Rescue_Vehicle_Capacity_Ambus = math.floor(0.5 * (self.Speed_Land_AmBus / a) * self.Working_Hours_per_Day * self.Number_of_Planning_Days)    # Approximate number of patients transferred in the planning Horizon (Ex: 1 week)
-        
-        for m in self.RescueVehicleSet:  # Assuming Number_Vehicle_Mode means there are four modes (0 to 3)
-            new_Land_Rescue_Vehicle_Capacity = 0
-            if m == 0:
-                new_Land_Rescue_Vehicle_Capacity = 1 * nominal_Land_Rescue_Vehicle_Capacity
-            elif m == 1:
-                new_Land_Rescue_Vehicle_Capacity = 2 * nominal_Land_Rescue_Vehicle_Capacity
-            elif m == 2:
-                new_Land_Rescue_Vehicle_Capacity = 20 * nominal_Land_Rescue_Vehicle_Capacity_Ambus      ## REf: (Decision support for hospital evacuation and emergency response) and (https://txemtf.org/avada_portfolio/ambus/)
-            elif m >= 3:
-                print("\nThe number of Vehicles (index m) cannot be more than 3!!!!!!!!!\n")
-                input("Press Enter to continue...")  # system("Pause") equivalent in Python
-            self.Land_Rescue_Vehicle_Capacity.append(new_Land_Rescue_Vehicle_Capacity)
-        
-        ##################################  Calculating Aerial Rescue Vehicle Capacity
-
-        a = (self.Square_Dimension / 2)
-        nominal_Aerial_Rescue_Vehicle_Capacity = math.floor(0.5 * (self.Speed_Aerial / a) * self.Working_Hours_per_Day * self.Number_of_Planning_Days)    # Approximate number of patients transferred in the planning Horizon (Ex: 1 week)
-        new_Aerial_Rescue_Vehicle_Capacity = 10 * nominal_Aerial_Rescue_Vehicle_Capacity        ## Ref: (A bi-objective robust optimization model for disaster response planning under uncertainties)
-        self.Aerial_Rescue_Vehicle_Capacity.append(new_Aerial_Rescue_Vehicle_Capacity)
+        ##################################  Calculating Rescue Vehicle Capacities
+        self.compute_rescue_vehicle_capacities()
 
         ##################################  Calculating Distances
         if self.NrDisasterAreas == 94:
@@ -956,6 +929,9 @@ class Instance(object):
         ##################################  Calculating Number of Land Rescue Vehicles that can be assigned to each ACF
         self.Number_Rescue_Vehicle_ACF = self.allocate_rescue_vehicles()
 
+        ################################## Generate Available Budget for ACFs + vehicle assignment
+        self.Total_Budget_ACF_Establishment = self.compute_total_budget_acf_establishment()
+
         ##################################  Calculating Number_Land_Rescue_Vehicle_Hospital
         self.Number_Land_Rescue_Vehicle_Hospital = self.allocate_hospital_rescue_vehicles()
 
@@ -1002,7 +978,10 @@ class Instance(object):
 
         ################################## Maximum Backup Hospital
         for h in self.HospitalSet:
-            self.Max_Backup_Hospital.append((self.NrHospitals - 1)) 
+            self.Max_Backup_Hospital.append((self.NrHospitals - 1))
+
+        ################################## Maximum Backup Recipient Hospital (bar{r}_{h'})
+        self.Max_Backup_Recipient_Hospital = self.allocate_max_backup_recipient_hospital()
 
         ##################################  Calculating Available Aerial Vehicles
         self.Available_Aerial_Vehicles_Hospital = np.zeros((len(self.HospitalSet)))
@@ -1086,106 +1065,290 @@ class Instance(object):
         self.AerialEvacuationRisk_Linear = self.compute_aerial_evacuation_risk(self.CumulativeThreatRiskLinear)
         self.AerialEvacuationRisk_Exponential = self.compute_aerial_evacuation_risk(self.CumulativeThreatRiskExponential)
 
+    def compute_total_budget_acf_establishment(self):
+        """
+        Compute first-stage budget B as a percentage of:
+            sum_i f_i  +  sum_m kappa_m^V * Number_Rescue_Vehicle_ACF[m]
+        then take max with max_i f_i so at least one ACF can be opened.
+        """
+        Total_Required_Budget_for_ACF_Establishment = 0.0
+        for i in self.ACFSet:
+            Total_Required_Budget_for_ACF_Establishment += self.Fixed_Cost_ACF_Constraint[i]
+
+        Total_Required_Budget_for_Vehicle_Assignment = 0.0
+        for m in self.RescueVehicleSet:
+            Total_Required_Budget_for_Vehicle_Assignment += (
+                self.VehicleAssignment_Cost_Constraint[m] * self.Number_Rescue_Vehicle_ACF[m]
+            )
+
+        Total_Required_Budget = (
+            Total_Required_Budget_for_ACF_Establishment + Total_Required_Budget_for_Vehicle_Assignment
+        )
+
+        budget_multiplier_numerator = getattr(
+            self, 'ACFBudget_Multiplier_Numerator', Constants.ACFBudget_Multiplier_Numerator
+        )
+        budget_multiplier_denominator = Constants.ACFBudget_Multiplier_Denominator
+        Total_Required_Budget = (
+            (Total_Required_Budget * budget_multiplier_numerator) / budget_multiplier_denominator
+        )
+        Max_Required_Budget_for_ACF_Establishment = max(self.Fixed_Cost_ACF_Constraint)
+
+        print("Total_Required_Budget_for_ACF_Establishment: ", Total_Required_Budget_for_ACF_Establishment)
+        print("Total_Required_Budget_for_Vehicle_Assignment: ", Total_Required_Budget_for_Vehicle_Assignment)
+        print("Total_Required_Budget (after percentage): ", Total_Required_Budget)
+        print("Max_Required_Budget_for_ACF_Establishment: ", Max_Required_Budget_for_ACF_Establishment)
+        print(f"Budget Multiplier Used: {budget_multiplier_numerator}/{budget_multiplier_denominator}")
+
+        return max(Total_Required_Budget, Max_Required_Budget_for_ACF_Establishment)
+
+    def set_forecasted_hospital_treatment_capacity(self):
+        """
+        Set ForecastedAvg/STD for scenario-dependent hospital treatment capacity.
+        Average equals the deterministic Hospital_Bed_Capacity; STD uses HospitalTreatmentCapacity_CV.
+        """
+        self.ForecastedAvgHospitalTreatmentCapacity = np.array(self.Hospital_Bed_Capacity, dtype=float).copy()
+        self.ForecastedSTDHospitalTreatmentCapacity = np.round(
+            self.HospitalTreatmentCapacity_CV * self.ForecastedAvgHospitalTreatmentCapacity
+        ).astype(float)
+        # Keep sampling interval non-negative: std cannot exceed the mean
+        self.ForecastedSTDHospitalTreatmentCapacity = np.minimum(
+            self.ForecastedSTDHospitalTreatmentCapacity,
+            self.ForecastedAvgHospitalTreatmentCapacity
+        )
+
+    def allocate_max_backup_recipient_hospital(self):
+        """
+        Generate bar{r}_{h'} = Max_Backup_Recipient_Hospital[h']: maximum number of hospitals
+        that may simultaneously designate h' as their backup receiving hospital.
+        """
+        n = self.NrHospitals
+        upper = min(3, max(1, n - 1))
+        max_backup_recipient = [1] * n
+
+        # Sort by capacity ascending; hospital index breaks ties for reproducibility
+        ranked = sorted(
+            self.HospitalSet,
+            key=lambda h: (float(self.Hospital_Bed_Capacity[h]), h)
+        )
+
+        for rank, hprime in enumerate(ranked):
+            if n <= 1:
+                r_bar = 1
+            else:
+                tercile = min(int(rank * 3 / n), 2)  # 0, 1, or 2
+                r_bar = min(1 + tercile, upper)
+            max_backup_recipient[hprime] = int(max(1, min(r_bar, n - 1)))
+
+        print("Max_Backup_Recipient_Hospital (bar r_h'): ", max_backup_recipient)
+        print(
+            "Hospital_Bed_Capacity used for bar r_h': ",
+            [float(self.Hospital_Bed_Capacity[h]) for h in self.HospitalSet]
+        )
+        return max_backup_recipient
+
+    def compute_rescue_vehicle_capacities(self):
+        """
+        Transport capacity of a single vehicle over one period, expressed in the unit of the
+        constraint that consumes it:
+            * _Distance (patient-kilometres): the ACF vehicle-capacity constraint weights the
+              casualty flow by the distance between the disaster area and the ACF.
+            * _Time (patient-minutes): the hospital and aerial vehicle-capacity constraints
+              weight the flow by the travel time, which is expressed in minutes.
+        Land_Rescue_Vehicle_Capacity is kept as the nominal number of patients a vehicle can
+        move per period over a trip of half the square dimension; it is a reporting figure only.
+        """
+        if self.NrRescueVehicles > len(self.RescueVehicle_Seats):
+            raise ValueError(
+                f"Only {len(self.RescueVehicle_Seats)} land vehicle types are parameterised, "
+                f"but the instance declares {self.NrRescueVehicles}."
+            )
+
+        working_hours_per_period = self.Working_Hours_per_Day * self.Number_of_Planning_Days
+        working_minutes_per_period = working_hours_per_period * 60
+        nominal_trip_length = self.Square_Dimension / 2
+
+        self.Land_Rescue_Vehicle_Capacity = []
+        self.Land_Rescue_Vehicle_Capacity_Distance = []
+        self.Land_Rescue_Vehicle_Capacity_Time = []
+
+        for m in self.RescueVehicleSet:
+            seats = self.RescueVehicle_Seats[m]
+            speed = self.RescueVehicle_Speed[m]
+
+            self.Land_Rescue_Vehicle_Capacity_Distance.append(
+                seats * self.RoundTrip_Factor * speed * working_hours_per_period
+            )
+            self.Land_Rescue_Vehicle_Capacity_Time.append(
+                seats * self.RoundTrip_Factor * working_minutes_per_period
+            )
+            self.Land_Rescue_Vehicle_Capacity.append(
+                seats * math.floor(
+                    self.RoundTrip_Factor * (speed / nominal_trip_length) * working_hours_per_period
+                )
+            )
+
+        self.Aerial_Rescue_Vehicle_Capacity_Time = [
+            self.AerialVehicle_Seats * self.RoundTrip_Factor * working_minutes_per_period
+        ]
+        self.Aerial_Rescue_Vehicle_Capacity = [
+            self.AerialVehicle_Seats * math.floor(
+                self.RoundTrip_Factor * (self.Speed_Aerial / nominal_trip_length) * working_hours_per_period
+            )
+        ]
+
+        print("Land_Rescue_Vehicle_Capacity_Distance (patient-km/period): ", self.Land_Rescue_Vehicle_Capacity_Distance)
+        print("Land_Rescue_Vehicle_Capacity_Time (patient-min/period): ", self.Land_Rescue_Vehicle_Capacity_Time)
+
+    def size_fleet_preserving_type_mix(self, required_workload, capacity_per_vehicle, safety_factor):
+        """
+        Size a fleet that covers 'required_workload' while keeping the proportions between
+        vehicle types fixed.
+
+        The mix is the one implied by the per-type requirements: if each type had to carry the
+        whole workload on its own it would need workload/capacity_m vehicles, so the share of
+        type m is proportional to 1/capacity_m. Small vehicles therefore stay the bulk of the
+        fleet and the expensive high-capacity ones stay a small minority, whatever the instance
+        size. The mix is then scaled up as a block until the aggregate capacity covers the
+        workload, so the ratio never degenerates into an even split.
+
+        :param required_workload: workload to cover in one period, in the unit of capacity_per_vehicle
+        :param capacity_per_vehicle: capacity of one vehicle of each type, same unit as the workload
+        :param safety_factor: cushion applied on top of the workload
+        :return: list with the number of vehicles of each type
+        """
+        nr_types = len(capacity_per_vehicle)
+        target_workload = max(required_workload, 0.0) * safety_factor
+
+        requirement_per_type = [1.0 / capacity for capacity in capacity_per_vehicle]
+        total_requirement = sum(requirement_per_type)
+        share = [requirement / total_requirement for requirement in requirement_per_type]
+
+        capacity_of_one_mix_unit = sum(share[m] * capacity_per_vehicle[m] for m in range(nr_types))
+        fleet_size = max(nr_types, math.ceil(target_workload / capacity_of_one_mix_unit))
+        fleet = self.round_preserving_shares(share, fleet_size)
+
+        # Rounding and the minimum of one vehicle per type can leave the fleet slightly short:
+        # top it up on the type that is furthest below its target share.
+        while sum(fleet[m] * capacity_per_vehicle[m] for m in range(nr_types)) < target_workload:
+            gap_to_share = [share[m] * (sum(fleet) + 1) - fleet[m] for m in range(nr_types)]
+            fleet[gap_to_share.index(max(gap_to_share))] += 1
+
+        return fleet
+
+    @staticmethod
+    def round_preserving_shares(share, total):
+        """
+        Largest-remainder rounding: turn fractional shares into integer counts summing to
+        'total' while staying as close as possible to the requested proportions.
+        Every type keeps at least one vehicle so that no vehicle type disappears from the fleet.
+        """
+        exact = [s * total for s in share]
+        counts = [int(math.floor(value)) for value in exact]
+
+        leftover = total - sum(counts)
+        by_largest_remainder = sorted(range(len(share)), key=lambda m: exact[m] - counts[m], reverse=True)
+        for position in range(leftover):
+            counts[by_largest_remainder[position % len(counts)]] += 1
+
+        return [max(1, count) for count in counts]
+
+    def compute_peak_acf_transport_workload(self):
+        """
+        Peak patient-kilometres per period that the ACF-assigned vehicles have to carry.
+        Only injury levels that may be treated at an ACF consume this fleet, and the upper end
+        of the demand interval (average + standard deviation) is used so that the fleet remains
+        adequate for the sampled scenarios rather than for the average one only.
+        """
+        acf_eligible_injuries = [
+            j for j in self.InjuryLevelSet
+            if any(self.J_u[j][self.NrHospitals + i] == 1 for i in self.ACFSet)
+        ]
+        average_distance_to_acf = [
+            float(np.mean([self.Distance_D_A[l][i] for i in self.ACFSet])) for l in self.DisasterAreaSet
+        ]
+
+        peak_workload = 0.0
+        for t in self.TimeBucketSet:
+            workload = sum(
+                (self.ForecastedAvgCasualtyDemand[t][j][l] + self.ForecastedSTDCasualtyDemand[t][j][l])
+                * average_distance_to_acf[l]
+                for j in acf_eligible_injuries
+                for l in self.DisasterAreaSet
+            )
+            peak_workload = max(peak_workload, workload)
+
+        return peak_workload
+
+    def compute_hospital_transport_workload(self, h):
+        """
+        Patient-minutes per period that the vehicles stationed at hospital h have to carry.
+        A hospital either receives casualties from the disaster areas or, when it is disrupted,
+        evacuates its own patients to a backup hospital; in both roles the flow it can handle in
+        one period is bounded by its bed capacity, so that capacity is used as the load and the
+        longer of the two representative travel times as the distance-equivalent.
+        """
+        inbound_time = float(np.mean([self.Time_D_H_Land[l][h] for l in self.DisasterAreaSet]))
+
+        backup_hospitals = self.K_h.get(h, set())
+        evacuation_time = (
+            float(np.mean([self.Time_H_H_Land[h][hprime] for hprime in backup_hospitals]))
+            if backup_hospitals else 0.0
+        )
+
+        return float(self.Hospital_Bed_Capacity[h]) * max(inbound_time, evacuation_time)
+
     def allocate_rescue_vehicles(self):
         """
-        Improved version of estimating and allocating rescue vehicles to ACFs.
-        Ensures that:
-            Number_Rescue_Vehicle_ACF[0] >= Number_Rescue_Vehicle_ACF[1] >= Number_Rescue_Vehicle_ACF[2]
+        Size the land rescue fleet that may be assigned to the ACFs.
+
+        The workload is measured in patient-kilometres per period, the unit the ACF
+        vehicle-capacity constraint actually consumes, and the composition follows the type mix
+        implied by the per-type capacities. Because capacity grows with the vehicle index, the
+        resulting fleet is naturally decreasing in m without having to be sorted.
         """
+        peak_workload = self.compute_peak_acf_transport_workload()
+        fleet = self.size_fleet_preserving_type_mix(
+            peak_workload,
+            self.Land_Rescue_Vehicle_Capacity_Distance,
+            self.Safety_Factor_Rescue_Vehicle_ACF,
+        )
+        self.Number_Rescue_Vehicle_ACF = np.array(fleet, dtype=float)
 
-        # Initialize array
-        self.Number_Rescue_Vehicle_ACF = np.zeros(len(self.RescueVehicleSet))
-
-        # Step 1: Compute total estimated demand per period
-        Total_Demand_Per_Period = self.ForecastedAvgCasualtyDemand.sum(axis=(1, 2))
-        print("Total_Demand_Per_Period: ", Total_Demand_Per_Period)
-
-        # Step 2: Find the max demand across periods
-        max_demand = Total_Demand_Per_Period.max()
-
-        # Step 3: Compute total number of vehicles needed
-        total_vehicles_needed = 0
-        vehicle_requirements = []
-        
-        for m in self.RescueVehicleSet:
-            required_for_m = math.ceil(max_demand / self.Land_Rescue_Vehicle_Capacity[m])
-            vehicle_requirements.append((m, required_for_m))
-            total_vehicles_needed += required_for_m
-
-        # Adjust based on safety factor
-        total_vehicles_needed = math.ceil(total_vehicles_needed * self.Safety_Factor_Rescue_Vehicle_ACF)
-
-        # Step 4: Allocate vehicles ensuring `m=0` gets the most
-        vehicle_requirements.sort(key=lambda x: x[1], reverse=True)  # Sort in descending order
-        remaining_vehicles = total_vehicles_needed
-
-        for m, _ in vehicle_requirements:
-            if remaining_vehicles > 0:
-                if m != self.NrRescueVehicles - 1:  # If not the last type
-                    assigned = math.ceil(remaining_vehicles / (self.NrRescueVehicles - m))  # More to lower indices
-                    self.Number_Rescue_Vehicle_ACF[m] = assigned
-                    remaining_vehicles -= assigned
-                else:  # Last type gets the remaining
-                    self.Number_Rescue_Vehicle_ACF[m] = remaining_vehicles
-
-        # Step 5: Ensure descending order explicitly
-        self.Number_Rescue_Vehicle_ACF = np.sort(self.Number_Rescue_Vehicle_ACF)[::-1]  # Sort in descending order
-        
         # Apply sensitivity analysis multiplier if enabled
         if Constants.SensitivityAnalysis and Constants.SensitivityAnalysis_NumberRescueVehicleACF:
             multiplier = getattr(self, 'RescueVehicleACF_Multiplier', 1.0)
             self.Number_Rescue_Vehicle_ACF = self.Number_Rescue_Vehicle_ACF * multiplier
             # Ensure integer values after multiplication
             self.Number_Rescue_Vehicle_ACF = np.ceil(self.Number_Rescue_Vehicle_ACF).astype(int)
-        
+
+        print("Peak ACF transport workload (patient-km/period): ", peak_workload)
+        print("Number_Rescue_Vehicle_ACF: ", self.Number_Rescue_Vehicle_ACF)
+
         return self.Number_Rescue_Vehicle_ACF        
 
     def allocate_hospital_rescue_vehicles(self):
         """
-        Improved version of estimating and allocating rescue vehicles to hospitals.
-        Ensures that:
-            - Number_Land_Rescue_Vehicle_Hospital[0][h] >= Number_Land_Rescue_Vehicle_Hospital[1][h] >= Number_Land_Rescue_Vehicle_Hospital[2][h]
-            - Vehicles are fairly distributed across hospitals
-        """
+        Size the land rescue fleet stationed at each hospital.
 
-        # Initialize array
+        The workload is measured in patient-minutes per period, the unit the hospital
+        vehicle-capacity constraint consumes, and each hospital receives its own fleet built
+        with the same type mix as the ACF fleet.
+        """
         self.Number_Land_Rescue_Vehicle_Hospital = np.zeros((len(self.RescueVehicleSet), len(self.HospitalSet)))
 
-        # Step 1: Compute total required vehicles per hospital
-        total_vehicles_per_hospital = []
-        total_global_demand = 0
-
         for h in self.HospitalSet:
-            total_required = 0
+            fleet = self.size_fleet_preserving_type_mix(
+                self.compute_hospital_transport_workload(h),
+                self.Land_Rescue_Vehicle_Capacity_Time,
+                self.Safety_Factor_Rescue_Vehicle_Hospital,
+            )
             for m in self.RescueVehicleSet:
-                required_for_m = math.ceil(self.Hospital_Bed_Capacity[h] / self.Land_Rescue_Vehicle_Capacity[m])
-                total_required += required_for_m
+                self.Number_Land_Rescue_Vehicle_Hospital[m][h] = fleet[m]
 
-            # Apply safety factor
-            total_required = math.ceil(total_required * self.Safety_Factor_Rescue_Vehicle_Hospital)
-            total_vehicles_per_hospital.append(total_required)
-            total_global_demand += total_required
+        print("Number_Land_Rescue_Vehicle_Hospital: \n", self.Number_Land_Rescue_Vehicle_Hospital)
 
-        # Step 2: Distribute rescue vehicles proportionally across hospitals
-        remaining_vehicles = total_global_demand
-        for h in self.HospitalSet:
-            if remaining_vehicles <= 0:
-                break
-
-            # Allocate proportionally based on each hospital’s demand
-            allocated = min(total_vehicles_per_hospital[h], remaining_vehicles)
-            remaining_vehicles -= allocated
-
-            # Step 3: Distribute across vehicle types
-            for m in self.RescueVehicleSet:
-                portion = allocated * ((self.NrRescueVehicles - m) / sum(range(1, self.NrRescueVehicles + 1)))  # Higher priority for lower index
-                self.Number_Land_Rescue_Vehicle_Hospital[m][h] = math.ceil(portion)
-
-        # Step 4: Ensure descending order
-        for h in self.HospitalSet:
-            self.Number_Land_Rescue_Vehicle_Hospital[:, h] = np.sort(self.Number_Land_Rescue_Vehicle_Hospital[:, h])[::-1]
-
-            return self.Number_Land_Rescue_Vehicle_Hospital
+        return self.Number_Land_Rescue_Vehicle_Hospital
                 
     def compute_aerial_evacuation_risk(self, CumulativeThreatRisk):
         """
@@ -1603,10 +1766,14 @@ class Instance(object):
                 'Fixed_Cost_ACF_Constraint': self.Fixed_Cost_ACF_Constraint,
                 'Total_Budget_ACF_Establishment': self.Total_Budget_ACF_Establishment,
                 'VehicleAssignment_Cost': self.VehicleAssignment_Cost,
+                'VehicleAssignment_Cost_Constraint': self.VehicleAssignment_Cost_Constraint,
                 'ForecastedAvgCasualtyDemand': self.ForecastedAvgCasualtyDemand,
                 'ForecastedSTDCasualtyDemand': self.ForecastedSTDCasualtyDemand,
                 'Land_Rescue_Vehicle_Capacity': self.Land_Rescue_Vehicle_Capacity,
+                'Land_Rescue_Vehicle_Capacity_Distance': self.Land_Rescue_Vehicle_Capacity_Distance,
+                'Land_Rescue_Vehicle_Capacity_Time': self.Land_Rescue_Vehicle_Capacity_Time,
                 'Aerial_Rescue_Vehicle_Capacity': self.Aerial_Rescue_Vehicle_Capacity,
+                'Aerial_Rescue_Vehicle_Capacity_Time': self.Aerial_Rescue_Vehicle_Capacity_Time,
                 'DisasterArea_Position': self.DisasterArea_Position,
                 'ACF_Position': self.ACF_Position,
                 'Hospital_Position': self.Hospital_Position,
@@ -1632,11 +1799,14 @@ class Instance(object):
                 'Number_Land_Rescue_Vehicle_Hospital': self.Number_Land_Rescue_Vehicle_Hospital,
                 'ForecastedAvgHospitalDisruption': self.ForecastedAvgHospitalDisruption,
                 'ForecastedSTDHospitalDisruption': self.ForecastedSTDHospitalDisruption,
+                'ForecastedAvgHospitalTreatmentCapacity': self.ForecastedAvgHospitalTreatmentCapacity,
+                'ForecastedSTDHospitalTreatmentCapacity': self.ForecastedSTDHospitalTreatmentCapacity,
                 'ForecastedAvgPatientDemand': self.ForecastedAvgPatientDemand,
                 'ForecastedSTDPatientDemand': self.ForecastedSTDPatientDemand,
                 'ForecastedAvgPercentagePatientDischarged': self.ForecastedAvgPercentagePatientDischarged,
                 'ForecastedSTDPercentagePatientDischarged': self.ForecastedSTDPercentagePatientDischarged,
                 'Max_Backup_Hospital': self.Max_Backup_Hospital,
+                'Max_Backup_Recipient_Hospital': self.Max_Backup_Recipient_Hospital,
                 'Available_Aerial_Vehicles_Hospital': self.Available_Aerial_Vehicles_Hospital,
                 'CoordinationCost': self.CoordinationCost,
                 'EvacuationRiskCost': self.EvacuationRiskCost,
@@ -1702,10 +1872,14 @@ class Instance(object):
                 'Fixed_Cost_ACF_Constraint': self.Fixed_Cost_ACF_Constraint,
                 'Total_Budget_ACF_Establishment': self.Total_Budget_ACF_Establishment,
                 'VehicleAssignment_Cost': self.VehicleAssignment_Cost,
+                'VehicleAssignment_Cost_Constraint': self.VehicleAssignment_Cost_Constraint,
                 'ForecastedAvgCasualtyDemand': self.ForecastedAvgCasualtyDemand,
                 'ForecastedSTDCasualtyDemand': self.ForecastedSTDCasualtyDemand,
                 'Land_Rescue_Vehicle_Capacity': self.Land_Rescue_Vehicle_Capacity,
+                'Land_Rescue_Vehicle_Capacity_Distance': self.Land_Rescue_Vehicle_Capacity_Distance,
+                'Land_Rescue_Vehicle_Capacity_Time': self.Land_Rescue_Vehicle_Capacity_Time,
                 'Aerial_Rescue_Vehicle_Capacity': self.Aerial_Rescue_Vehicle_Capacity,
+                'Aerial_Rescue_Vehicle_Capacity_Time': self.Aerial_Rescue_Vehicle_Capacity_Time,
                 'DisasterArea_Position': self.DisasterArea_Position,
                 'ACF_Position': self.ACF_Position,
                 'Hospital_Position': self.Hospital_Position,
@@ -1731,11 +1905,14 @@ class Instance(object):
                 'Number_Land_Rescue_Vehicle_Hospital': self.Number_Land_Rescue_Vehicle_Hospital,
                 'ForecastedAvgHospitalDisruption': self.ForecastedAvgHospitalDisruption,
                 'ForecastedSTDHospitalDisruption': self.ForecastedSTDHospitalDisruption,
+                'ForecastedAvgHospitalTreatmentCapacity': self.ForecastedAvgHospitalTreatmentCapacity,
+                'ForecastedSTDHospitalTreatmentCapacity': self.ForecastedSTDHospitalTreatmentCapacity,
                 'ForecastedAvgPatientDemand': self.ForecastedAvgPatientDemand,
                 'ForecastedSTDPatientDemand': self.ForecastedSTDPatientDemand,
                 'ForecastedAvgPercentagePatientDischarged': self.ForecastedAvgPercentagePatientDischarged,
                 'ForecastedSTDPercentagePatientDischarged': self.ForecastedSTDPercentagePatientDischarged,
                 'Max_Backup_Hospital': self.Max_Backup_Hospital,
+                'Max_Backup_Recipient_Hospital': self.Max_Backup_Recipient_Hospital,
                 'Available_Aerial_Vehicles_Hospital': self.Available_Aerial_Vehicles_Hospital,
                 'CoordinationCost': self.CoordinationCost,
                 'EvacuationRiskCost': self.EvacuationRiskCost,
@@ -1793,10 +1970,19 @@ class Instance(object):
             self.Fixed_Cost_ACF_Constraint = data_loaded['Fixed_Cost_ACF_Constraint']
             self.Total_Budget_ACF_Establishment = data_loaded['Total_Budget_ACF_Establishment']
             self.VehicleAssignment_Cost = data_loaded['VehicleAssignment_Cost']
+            _legacy_instance_without_kappa_V = 'VehicleAssignment_Cost_Constraint' not in data_loaded
+            self.VehicleAssignment_Cost_Constraint = data_loaded.get(
+                'VehicleAssignment_Cost_Constraint',
+                list(Constants.VehicleAssignment_Cost_Constraint[:self.NrRescueVehicles])
+            )
             self.ForecastedAvgCasualtyDemand = data_loaded['ForecastedAvgCasualtyDemand']
             self.ForecastedSTDCasualtyDemand = data_loaded['ForecastedSTDCasualtyDemand']
             self.Land_Rescue_Vehicle_Capacity = data_loaded['Land_Rescue_Vehicle_Capacity']
             self.Aerial_Rescue_Vehicle_Capacity = data_loaded['Aerial_Rescue_Vehicle_Capacity']
+            _legacy_instance_without_capacity_units = 'Land_Rescue_Vehicle_Capacity_Distance' not in data_loaded
+            self.Land_Rescue_Vehicle_Capacity_Distance = data_loaded.get('Land_Rescue_Vehicle_Capacity_Distance', [])
+            self.Land_Rescue_Vehicle_Capacity_Time = data_loaded.get('Land_Rescue_Vehicle_Capacity_Time', [])
+            self.Aerial_Rescue_Vehicle_Capacity_Time = data_loaded.get('Aerial_Rescue_Vehicle_Capacity_Time', [])
             self.DisasterArea_Position = data_loaded['DisasterArea_Position']
             self.ACF_Position = data_loaded['ACF_Position']
             self.Hospital_Position = data_loaded['Hospital_Position']
@@ -1822,11 +2008,18 @@ class Instance(object):
             self.Number_Land_Rescue_Vehicle_Hospital = data_loaded['Number_Land_Rescue_Vehicle_Hospital']
             self.ForecastedAvgHospitalDisruption = data_loaded['ForecastedAvgHospitalDisruption']
             self.ForecastedSTDHospitalDisruption = data_loaded['ForecastedSTDHospitalDisruption']
+            if 'ForecastedAvgHospitalTreatmentCapacity' in data_loaded and 'ForecastedSTDHospitalTreatmentCapacity' in data_loaded:
+                self.ForecastedAvgHospitalTreatmentCapacity = data_loaded['ForecastedAvgHospitalTreatmentCapacity']
+                self.ForecastedSTDHospitalTreatmentCapacity = data_loaded['ForecastedSTDHospitalTreatmentCapacity']
+            else:
+                # Legacy pickles predate uncertain hospital treatment capacity
+                self.set_forecasted_hospital_treatment_capacity()
             self.ForecastedAvgPatientDemand = data_loaded['ForecastedAvgPatientDemand']
             self.ForecastedSTDPatientDemand = data_loaded['ForecastedSTDPatientDemand']
             self.ForecastedAvgPercentagePatientDischarged = data_loaded['ForecastedAvgPercentagePatientDischarged']
             self.ForecastedSTDPercentagePatientDischarged = data_loaded['ForecastedSTDPercentagePatientDischarged']
             self.Max_Backup_Hospital = data_loaded['Max_Backup_Hospital']
+            self.Max_Backup_Recipient_Hospital = data_loaded.get('Max_Backup_Recipient_Hospital', None)
             self.Available_Aerial_Vehicles_Hospital = data_loaded['Available_Aerial_Vehicles_Hospital']
             self.CoordinationCost = data_loaded['CoordinationCost']
             self.EvacuationRiskCost = data_loaded['EvacuationRiskCost']
@@ -1842,6 +2035,20 @@ class Instance(object):
             self.AerialEvacuationRisk_Linear = data_loaded['AerialEvacuationRisk_Linear']
             self.AerialEvacuationRisk_Exponential = data_loaded['AerialEvacuationRisk_Exponential']
 
+            # Legacy pickles predate kappa_m^V in the budget; recompute B consistently
+            if _legacy_instance_without_kappa_V:
+                self.Total_Budget_ACF_Establishment = self.compute_total_budget_acf_establishment()
+
+            # Legacy pickles predate bar{r}_{h'}; generate from baseline Hospital_Bed_Capacity
+            if self.Max_Backup_Recipient_Hospital is None:
+                self.Max_Backup_Recipient_Hospital = self.allocate_max_backup_recipient_hospital()
+
         self.ComputeIndices()
+
+        # Legacy pickles store a single vehicle capacity that mixes patient counts with the
+        # distance- and time-weighted constraints; rebuild the per-unit capacities from scratch
+        if _legacy_instance_without_capacity_units:
+            self.compute_rescue_vehicle_capacities()
+
         if Constants.Debug: self.Print_Attributes()
         print(f"Data loaded from {filename}")

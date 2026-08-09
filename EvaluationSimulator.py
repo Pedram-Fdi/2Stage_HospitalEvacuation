@@ -95,6 +95,7 @@ class EvaluationSimulator(object):
                     if Constants.Debug: print(f"HospitalDisruption:\n", scenario.HospitalDisruption)
                     if Constants.Debug: print(f"PatientDemand:\n", scenario.PatientDemand)
                     if Constants.Debug: print(f"PatientDischargedPercentage:\n", scenario.PatientDischargedPercentage)
+                    if Constants.Debug: print(f"HospitalTreatmentCapacity:\n", scenario.HospitalTreatmentCapacity)
 
                     #Defin the MIP
                     mipsolver = MIPSolver(  instance = self.Instance, 
@@ -326,7 +327,8 @@ class EvaluationSimulator(object):
                 if(Constants.Debug): print("CasualtyDemand:\n", scenariotree.CasualtyDemand) 
                 if(Constants.Debug): print("HospitalDisruption:\n", scenariotree.HospitalDisruption) 
                 if(Constants.Debug): print("PatientDemand:\n", scenariotree.PatientDemand) 
-                if(Constants.Debug): print("PatientDischargedPercentage:\n", scenariotree.PatientDischargedPercentage) 
+                if(Constants.Debug): print("PatientDischargedPercentage:\n", scenariotree.PatientDischargedPercentage)
+                if(Constants.Debug): print("HospitalTreatmentCapacity:\n", scenariotree.HospitalTreatmentCapacity) 
                 
                 scenario = scenariotree.GetAllScenarioSet()[0]
                 #scenario = scenariotree

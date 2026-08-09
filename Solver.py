@@ -143,6 +143,7 @@ class Solver(object):
         HospitalDisruption = scenario.HospitalDisruption  # (num_scenarios, H)
         PatientDemand = scenario.PatientDemand  # (num_scenarios, J, H)
         PatientDischargedPercentage = scenario.PatientDischargedPercentage  # (num_scenarios, T, J, U)
+        HospitalTreatmentCapacity = scenario.HospitalTreatmentCapacity  # (num_scenarios, H)
 
         # Specify the directory to save the file
         output_directory = os.path.join(os.getcwd(), "Instances")  # "./Instances"
@@ -184,6 +185,11 @@ class Solver(object):
                 np.savetxt(file, reshaped_patient_discharged, fmt='%.4f', delimiter=' ')
                 file.write("\n")
 
+                #Save HospitalTreatmentCapacity (2D → 1D)
+                file.write(f"HospitalTreatmentCapacity:\n")
+                np.savetxt(file, HospitalTreatmentCapacity[s].reshape(1, -1), fmt='%d', delimiter=' ')
+                file.write("\n")
+
         print(f"Scenarios saved to {file_path}")
 
     def LocationAllocation(self, treestructur, averagescenario=False, recordsolveinfo=False):    
@@ -200,6 +206,7 @@ class Solver(object):
         print("HospitalDisruption:\n", Scenario.HospitalDisruption)
         print("PatientDemand:\n", Scenario.PatientDemand)
         print("PatientDischargedPercentage:\n", Scenario.PatientDischargedPercentage)
+        print("HospitalTreatmentCapacity:\n", Scenario.HospitalTreatmentCapacity)
 
         # Save scenarios to file
         if Constants.Debug:

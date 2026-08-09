@@ -106,7 +106,8 @@ PH_Model_lp/
 infeasible_model.lp
 
 # Generated solution plots (keep static UI assets under UI/)
-UI/Solution_UI/
+UI/
 
 # Gradio local state
 .gradio/
+Instances/

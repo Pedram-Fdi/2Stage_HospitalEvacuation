@@ -9,7 +9,7 @@ import torch.optim as optim
 from collections import deque
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
-from replay_memory import ReplayMemory, ReplayMemoryDataset
+from replay_memory import ReplayMemory
 
 # Neural Network for Deep Q-Learning
 class QNetwork(nn.Module):
@@ -41,7 +41,8 @@ class DQLAgent:
                  buffer_size=5000,
                  batch_size=64,
                  target_update_freq=1000,
-                 tau=0.001):
+                 tau=0.001,
+                 learning_starts=32):
         self.num_actions = num_actions
         self.state_size = state_size
         self.selection_method = selection_method
@@ -55,70 +56,77 @@ class DQLAgent:
         self.batch_size = batch_size
         self.target_update_freq = target_update_freq
         self.tau = tau  # Soft update rate
+        # Minimum number of stored transitions before the first gradient step.
+        self.learning_starts = max(1, min(learning_starts, batch_size))
+
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         # Neural networks
-        self.policy_net = QNetwork(state_size, num_actions)
-        self.target_net = QNetwork(state_size, num_actions)
+        self.policy_net = QNetwork(state_size, num_actions).to(self.device)
+        self.target_net = QNetwork(state_size, num_actions).to(self.device)
+        # The target network must start as a copy of the policy network, otherwise the
+        # bootstrapped targets are pure noise during the first updates.
+        self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
 
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=alpha)
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.SmoothL1Loss()
 
-        # Replay Memory and DataLoader
+        # Replay Memory
         self.memory = ReplayMemory(buffer_size)
-        self.data_loader = None
+        self.memory.device = self.device
         self.steps_done = 0
-
-        # Initialize DataLoader if replay memory is prefilled
-        self._initialize_data_loader()
+        self.train_steps = 0
 
     def store_experience(self, state, action, reward, next_state, done):
         """Store an experience in the replay buffer."""
         self.memory.push((state, action, reward, next_state, done))
 
-        # Reinitialize DataLoader periodically
-        if len(self.memory) % 100 == 0 and len(self.memory) > 0:
-            self._initialize_data_loader()
-
-    def _initialize_data_loader(self):
-        """Initialize or reinitialize the DataLoader for the replay memory."""
-        if len(self.memory) > 0:  # Ensure replay memory has at least one experience
-            dataset = ReplayMemoryDataset(self.memory)
-            self.data_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
-        else:
-            self.data_loader = None  # No DataLoader if memory is empty
+    def sample_batch(self):
+        """Sample one mini-batch of experiences and stack it into batched tensors."""
+        batch = self.memory.sample(min(self.batch_size, len(self.memory)))
+        states = torch.stack([experience[0] for experience in batch])
+        actions = torch.stack([experience[1] for experience in batch])
+        rewards = torch.stack([experience[2] for experience in batch])
+        next_states = torch.stack([experience[3] for experience in batch])
+        dones = torch.stack([experience[4] for experience in batch])
+        return states, actions, rewards, next_states, dones
 
     def train(self):
-        """Train the agent using a sampled batch of experiences."""
-        if self.data_loader is None:  # Skip training if DataLoader is not ready
+        """Train the agent on a single mini-batch sampled from the replay buffer."""
+        if len(self.memory) < self.learning_starts:
             return None
 
-        total_loss = 0
-        for batch in self.data_loader:
-            states, actions, rewards, next_states, dones = batch
+        states, actions, rewards, next_states, dones = self.sample_batch()
 
-            # Current Q values
-            current_q = self.policy_net(states).gather(1, actions)
+        # Current Q values
+        current_q = self.policy_net(states).gather(1, actions)
 
-            # Compute target Q values
-            with torch.no_grad():
-                max_next_q = self.target_net(next_states).max(1)[0].unsqueeze(1)
-                target_q = rewards + self.gamma * max_next_q * (1 - dones)
+        # Compute target Q values
+        with torch.no_grad():
+            max_next_q = self.target_net(next_states).max(1)[0].unsqueeze(1)
+            target_q = rewards + self.gamma * max_next_q * (1 - dones)
 
-            # Compute loss
-            loss = self.loss_fn(current_q, target_q)
-            total_loss += loss.item()
+        loss = self.loss_fn(current_q, target_q)
 
-            # Optimize the model
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+        # Optimize the model
+        self.optimizer.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(self.policy_net.parameters(), 10.0)
+        self.optimizer.step()
 
-        # Perform soft update of the target network
-        self.soft_update(self.policy_net, self.target_net)
+        self.train_steps += 1
+        self.update_target_network()
 
-        # Return average loss for the batch
-        return total_loss / len(self.data_loader)
+        return loss.item()
+
+    def update_target_network(self):
+        """Refresh the target network, either periodically (hard) or every step (soft)."""
+        if self.target_update_freq and self.target_update_freq > 0:
+            if self.train_steps % self.target_update_freq == 0:
+                self.target_net.load_state_dict(self.policy_net.state_dict())
+        else:
+            self.soft_update(self.policy_net, self.target_net)
 
     def soft_update(self, local_model, target_model):
         """Soft update model parameters."""
@@ -163,7 +171,7 @@ class DQLAgent:
         
     def get_q_values(self, state):
         """Retrieve Q-values for a given state from the policy network."""
-        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(next(self.policy_net.parameters()).device)
+        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         with torch.no_grad():
             q_values = self.policy_net(state_tensor).squeeze(0).cpu().numpy()
         return q_values

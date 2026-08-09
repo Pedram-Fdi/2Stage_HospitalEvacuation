@@ -81,6 +81,19 @@ class Constants( object ):
     Max_ALNS_Iterations = 1000
     max_no_improv = 50                     ## If after "max_no_improv" iteration, the global best objective has not changed, we stop it!
     RandomALNSInitilization = False
+
+    ## Simulated Annealing acceptance (temperature is derived from the initial cost, not an absolute value)
+    SA_InitialAcceptanceDegradation = 0.02      # A move that worsens the cost by this fraction ...
+    SA_InitialAcceptanceProbability = 0.5       # ... is accepted with this probability at the first iteration
+    SA_FinalTemperatureFraction = 0.001         # Temperature at the last iteration, as a fraction of the initial one
+    SA_MinTemperature = 1e-9                    # Numerical floor, avoids division by zero in the Metropolis rule
+
+    ## RL reward shaping (classic ALNS sigma scores + normalized cost improvement)
+    RL_Sigma_NewGlobalBest = 1.0               # sigma_1: the move produced a new global best
+    RL_Sigma_AcceptedImproving = 0.5           # sigma_2: the move improved the current solution and was accepted
+    RL_Sigma_AcceptedWorsening = 0.2           # sigma_3: a worsening move was accepted by the Metropolis rule
+    RL_Sigma_Rejected = 0.0                    # The move was rejected
+    RL_Reward_ImprovementScale = 1.0           # Weight of the normalized (relative) cost improvement
     
     ####################### BBC Algorithm
     My_EpGap_BBC = 0.01
@@ -103,6 +116,10 @@ class Constants( object ):
     SensitivityAnalysis_ACFBudget = False        # If True, enables sensitivity analysis on ACF budget multiplier
     ACFBudget_Multiplier_Numerator = 85          # Default numerator for budget calculation (budget = total * numerator / denominator)
     ACFBudget_Multiplier_Denominator = 100         # Denominator for budget calculation (fixed at 20)
+
+    # kappa_m^V: cost of mobilizing/staging/assigning one land-based rescue vehicle of type m
+    # Indexed 0-based: m=0 (type 1), m=1 (type 2), m=2 (type 3)
+    VehicleAssignment_Cost_Constraint = [987, 1157, 2520]
     SensitivityAnalysis_NumberRescueVehicleACF = False  # If True, enables sensitivity analysis on number of rescue vehicles for ACF
     SensitivityAnalysis_Casualty_Shortage_Cost = False  # If True, enables sensitivity analysis on casualty shortage cost
     Casualty_Shortage_Cost_StepSize = 1              # Step size for casualty shortage cost sensitivity analysis (starts from 0)

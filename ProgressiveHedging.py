@@ -1283,6 +1283,7 @@ class ProgressiveHedging(object):
 
         GivenBackupHospital_Applicable_whhprime = [[[round(value) for value in inner] for inner in outer] for outer in self.CurrentImplementableSolution.BackupHospital_W_whhPrime]
         GivenBackupHospital_Applicable_hhprime = self.Check_Hospitals_Compatibility_Constraint(GivenBackupHospital_Applicable_whhprime[0])
+        GivenBackupHospital_Applicable_hhprime = self.Check_Max_Backup_Recipient_Constraint(GivenBackupHospital_Applicable_hhprime)
 
         # Now, replicate these scenario-0 values for all scenarios using one loop:
         self.GivenACFEstablishment_Applicable = []
@@ -1325,9 +1326,9 @@ class ProgressiveHedging(object):
 
     def Check_ACF_Establishment_Budget_Constraint(self, x_var_i, Rounded_x_var_row, RandomRemoval=False):
         """
-        Check the budget constraint for ACF establishment. If the sum exceeds the budget, 
-        remove the ACFs with the lowest x_var value one by one until the budget is met.
-        If RandomRemoval is True, ACFs will be removed randomly instead of based on their capacity.
+        Check the ACF-establishment component of the budget constraint.
+        If sum_i f_i x_i exceeds B, remove ACFs (lowest x_var, or randomly) until feasible.
+        Vehicle-assignment costs are enforced separately in check_total_budget_constraint.
         """
         # Calculate the initial sum of fixed costs
         total_cost = sum(self.Instance.Fixed_Cost_ACF_Constraint[i] * Rounded_x_var_row[i] for i in self.Instance.ACFSet)
@@ -1368,7 +1369,51 @@ class ProgressiveHedging(object):
                     break
         
         # After modifying, if we still don't meet the budget, return the modified rounded x solution
-        return Rounded_x_var_row   
+        return Rounded_x_var_row
+
+    def check_total_budget_constraint(self, Rounded_x_var_row, Rounded_thetaVar_im, RandomRemoval=False):
+        """
+        Enforce sum_i f_i x_i + sum_{i,m} kappa_m^V theta_{im} <= B by reducing vehicle
+        assignments until the combined first-stage budget is feasible.
+        """
+        def compute_total_cost():
+            acf_cost = sum(
+                self.Instance.Fixed_Cost_ACF_Constraint[i] * Rounded_x_var_row[i]
+                for i in self.Instance.ACFSet
+            )
+            vehicle_cost = sum(
+                self.Instance.VehicleAssignment_Cost_Constraint[m] * Rounded_thetaVar_im[i][m]
+                for i in self.Instance.ACFSet
+                for m in self.Instance.RescueVehicleSet
+            )
+            return acf_cost + vehicle_cost
+
+        if compute_total_cost() <= self.Instance.Total_Budget_ACF_Establishment:
+            return Rounded_thetaVar_im
+
+        vehicle_assignments = [
+            (i, m)
+            for i in self.Instance.ACFSet
+            for m in self.Instance.RescueVehicleSet
+            if Rounded_thetaVar_im[i][m] > 0
+        ]
+
+        if RandomRemoval:
+            random.shuffle(vehicle_assignments)
+        else:
+            # Prefer reducing assignments at lower-capacity ACFs first
+            vehicle_assignments.sort(key=lambda im: self.Instance.ACF_Bed_Capacity[im[0]])
+
+        for i, m in vehicle_assignments:
+            while (
+                Rounded_thetaVar_im[i][m] > 0
+                and compute_total_cost() > self.Instance.Total_Budget_ACF_Establishment
+            ):
+                Rounded_thetaVar_im[i][m] -= 1
+            if compute_total_cost() <= self.Instance.Total_Budget_ACF_Establishment:
+                break
+
+        return Rounded_thetaVar_im
     
     def check_connection_between_x_and_thetaVar(self, Rounded_ACFEstablishment_x_i, Rounded_thetaVar_im):
         """
@@ -1415,12 +1460,16 @@ class ProgressiveHedging(object):
         Check the constraints for the land rescue vehicle allocation:
         1. Ensure that if an ACF is not established (x = 0), then no vehicles are assigned (thetaVar = 0).
         2. Ensure that the total number of vehicles assigned to each ACF does not exceed the available vehicles.
+        3. Ensure the combined ACF + vehicle-assignment budget constraint is respected.
         """
         # Step 1: Check the connection between x and thetaVar
         Rounded_thetaVar_im = self.check_connection_between_x_and_thetaVar(Rounded_ACFEstablishment_x_i, Rounded_thetaVar_im)
         
         # Step 2: Check and adjust the total number of vehicles assigned to each ACF
         Rounded_thetaVar_im = self.check_limited_number_of_rescue_vehicles(Rounded_thetaVar_im)
+
+        # Step 3: Enforce sum f_i x_i + sum kappa_m^V theta_im <= B
+        Rounded_thetaVar_im = self.check_total_budget_constraint(Rounded_ACFEstablishment_x_i, Rounded_thetaVar_im)
         
         return Rounded_thetaVar_im
 
@@ -1436,4 +1485,35 @@ class ProgressiveHedging(object):
                     if h_prime not in self.Instance.K_h.get(h, set()):
                         Rounded_w_hhprime[h][h_prime] = 0  # Set to 0 if not compatible
         
+        return Rounded_w_hhprime
+
+    def Check_Max_Backup_Recipient_Constraint(self, Rounded_w_hhprime, RandomRemoval=False):
+        """
+        Enforce sum_{h : h' in K_h} w_{hh'} <= Max_Backup_Recipient_Hospital[h'] (bar{r}_{h'}).
+        Excess inbound designations to an oversubscribed recipient are deactivated.
+        """
+        for hprime in self.Instance.HospitalSet:
+            senders = [
+                h for h in self.Instance.HospitalSet
+                if h != hprime
+                and hprime in self.Instance.K_h.get(h, set())
+                and Rounded_w_hhprime[h][hprime] == 1
+            ]
+            limit = int(self.Instance.Max_Backup_Recipient_Hospital[hprime])
+            if len(senders) <= limit:
+                continue
+
+            excess = len(senders) - limit
+            if RandomRemoval:
+                random.shuffle(senders)
+            else:
+                # Prefer dropping higher-coordination-cost arrangements first
+                senders.sort(
+                    key=lambda h: float(self.Instance.CoordinationCost[h][hprime]),
+                    reverse=True
+                )
+
+            for h in senders[:excess]:
+                Rounded_w_hhprime[h][hprime] = 0
+
         return Rounded_w_hhprime
