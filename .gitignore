@@ -91,4 +91,22 @@ wandb/
 *.temp
 tmp/
 temp/
+Temp/
 *.bak
+
+# Solver / experiment run outputs (do not commit)
+Solutions/
+Evaluations/
+Test/
+GurobiLog/
+MIP_Model_LP/
+MIP_Model_LP_Evaluation/
+PH_Model_lp/
+*.xlsx
+infeasible_model.lp
+
+# Generated solution plots (keep static UI assets under UI/)
+UI/Solution_UI/
+
+# Gradio local state
+.gradio/
