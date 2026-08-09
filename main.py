@@ -68,11 +68,11 @@ def parseArguments():
     else:
 
         # Mandatory arguments
-        parser.add_argument("--Action", help="Action to perform", type=str, choices=["GenerateInstances", "Solve"], default = "GenerateInstances")
-        parser.add_argument("--Instance", help="Instance name", type=str, default="4_15_5_30_3_1_CRP") 
+        parser.add_argument("--Action", help="Action to perform", type=str, choices=["GenerateInstances", "Solve"], default = "Solve")
+        parser.add_argument("--Instance", help="Instance name", type=str, default="3_10_3_15_3_1_CRP") 
         parser.add_argument("--Model", help="Stochastic model type", type=str, choices=["Average", "2Stage"], default = "2Stage")
         parser.add_argument("--Solver", help="Solver type", type=str, choices=["MIP", "ALNS", "PHA", "BBC"], default = "MIP")
-        parser.add_argument("--NrScenario", help="The number of scenarios used for optimization (all10 ...)", type=str, default = "25")
+        parser.add_argument("--NrScenario", help="The number of scenarios used for optimization (all10 ...)", type=str, default = "10")
         parser.add_argument("--PHAObj", help="Obj. function of PHA either Quadratic or Linear", type=str, choices=["Q", "L"], default = "Q")
         parser.add_argument("--PHAPenalty", help="Penalty Parameter (rho) in PHA, Static, Dynamic, dynamic Learning", type=str, choices=["S", "D", "DL"], default = "S")
         parser.add_argument("--ALNSRL", help="Whether we use RL in ALNS or not", type=int, choices=["0", "1"], default = 1)
