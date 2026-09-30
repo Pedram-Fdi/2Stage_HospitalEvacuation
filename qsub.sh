@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --account=def-sehasd
-#SBATCH --time=10:00:00
+#SBATCH --time=5:00:00
 #SBATCH --mem=25G
 #SBATCH --cpus-per-task=4
 #SBATCH --output=/home/pfarghad/Myschedulingmodel_3/RL/JobOutputs/%x-%j.out
@@ -113,7 +113,9 @@ if [[ -n "$GNU_TIME" ]]; then
   EXIT_CODE=$?
   set -e
   if [[ -s "$TIMEFILE" ]]; then
-    read -r ELAPSED_SEC MAXRSS_KB < "$TIMEFILE" || true
+    # On failure GNU time prepends "Command exited with non-zero status N",
+    # so the measurement is always the last line.
+    read -r ELAPSED_SEC MAXRSS_KB < <(tail -n 1 "$TIMEFILE") || true
   fi
 else
   # Fallback: wrap the solve so RUSAGE_CHILDREN reports MaxRSS (KB on Linux)
@@ -141,6 +143,11 @@ fi
 
 rm -f "$TIMEFILE"
 
+# Drop anything non-numeric so a malformed measurement cannot abort the job
+# before the CSV row is written.
+[[ "${ELAPSED_SEC}" =~ ^[0-9]+([.][0-9]+)?$ ]] || ELAPSED_SEC=""
+[[ "${MAXRSS_KB}" =~ ^[0-9]+$ ]] || MAXRSS_KB=""
+
 # If GNU time path did not set elapsed, fall back to wall clock
 if [[ -z "${ELAPSED_SEC}" ]]; then
   END_EPOCH=$(date +%s)
@@ -149,7 +156,7 @@ fi
 
 MAXRSS_MB=""
 if [[ -n "${MAXRSS_KB}" ]]; then
-  MAXRSS_MB=$(python -c "print(round(float('${MAXRSS_KB}') / 1024.0, 2))")
+  MAXRSS_MB=$(awk -v kb="${MAXRSS_KB}" 'BEGIN { printf "%.2f", kb / 1024 }')
 fi
 
 REQ_MEM="${SLURM_MEM_PER_NODE:-${SLURM_MEM_PER_CPU:-NA}}"
