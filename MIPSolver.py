@@ -10,6 +10,7 @@ import os
 from Tool import Tool
 from Solution import Solution
 from ScenarioTree import ScenarioTree
+from ObjectivePolicyWeights import ObjectivePolicyWeights
 
 class MIPSolver(object):
     # constructor
@@ -23,7 +24,8 @@ class MIPSolver(object):
                  givenBackupHospital = [],
                  evaluatesolution = False,
                  linearRelaxation = False,
-                 logfile=""):
+                 logfile="",
+                 objective_policy_weights=None):
         
         if Constants.Debug: print("\n We are in 'MIPSolver' Class -- Constructor")
         # Define some attributes and functions which help to set the index of the variable.
@@ -205,6 +207,18 @@ class MIPSolver(object):
 
         self.EvaluateSolution = evaluatesolution
         self.LinearRelaxation = linearRelaxation
+
+        # Policy preference weights that scale existing second-stage objective coefficients.
+        # Active only when SensitivityAnalysis and SensitivityAnalysis_ObjectiveFunction are True.
+        # Otherwise always baseline (1,1,1,1) so main.py is unchanged.
+        if not Constants.IsObjectiveFunctionSensitivityActive():
+            self.ObjectivePolicyWeights = ObjectivePolicyWeights.baseline()
+        elif objective_policy_weights is None:
+            self.ObjectivePolicyWeights = ObjectivePolicyWeights.baseline()
+        elif isinstance(objective_policy_weights, ObjectivePolicyWeights):
+            self.ObjectivePolicyWeights = objective_policy_weights
+        else:
+            self.ObjectivePolicyWeights = ObjectivePolicyWeights.from_mapping(objective_policy_weights)
 
     # Compute the start of index and the number of variables for the considered instance
     def ComputeIndices(self):
@@ -1669,7 +1683,10 @@ class MIPSolver(object):
                         for u in self.Instance.MedFacilitySet:
                             for m in self.Instance.RescueVehicleSet:
                                 Index_Cost = self.GetIndexCasualtyTransferVariables(w, t, j, l, u, m) - self.GetStartCasualtyTransferVariables()
-                                casualtyTransferCost[Index_Cost] = self.GetCasualtyTransferCoeff(w, l, u)
+                                casualtyTransferCost[Index_Cost] = (
+                                    self.GetCasualtyTransferCoeff(w, l, u)
+                                    * self.ObjectivePolicyWeights.travel_time
+                                )
                                 Index_Var = self.GetIndexCasualtyTransferVariables(w, t, j, l, u, m)
                                 var_name = f"q_w_{w}_t_{t}_j_{j}_l_{l}_u_{u}_m_{m}_index_{Index_Var}"
                                 self.CasualtyTransfer_Var[Index_Var] = self.LocAloc.addVar(vtype=GRB.CONTINUOUS, obj=casualtyTransferCost[Index_Cost], lb=0, ub=GRB.INFINITY, name=var_name)
@@ -1683,7 +1700,10 @@ class MIPSolver(object):
                 for j in self.Instance.InjuryLevelSet:
                     for l in self.Instance.DisasterAreaSet:
                         Index_Cost = self.GetIndexUnsatisfiedCasualtiesVariables(w, t, j, l) - self.GetStartUnsatisfiedCasualtiesVariables()
-                        unsatisfiedCasualtiesCost[Index_Cost] = self.GetUnsatisfiedCasualtiesCoeff(w, j)
+                        unsatisfiedCasualtiesCost[Index_Cost] = (
+                            self.GetUnsatisfiedCasualtiesCoeff(w, j)
+                            * self.ObjectivePolicyWeights.unmet_demand
+                        )
                         Index_Var = self.GetIndexUnsatisfiedCasualtiesVariables(w, t, j, l)
                         var_name = f"mu_w_{w}_t_{t}_j_{j}_l_{l}_index_{Index_Var}"
                         self.UnsatisfiedCasualties_Var[Index_Var] = self.LocAloc.addVar(vtype=GRB.CONTINUOUS, obj=unsatisfiedCasualtiesCost[Index_Cost], lb=0, ub=GRB.INFINITY, name=var_name)
@@ -1713,7 +1733,10 @@ class MIPSolver(object):
                         for u in self.Instance.MedFacilitySet:
                             for m in self.Instance.RescueVehicleSet:
                                 Index_Cost = self.GetIndexLandEvacuatedPatientsVariables(w, t, j, h, u, m) - self.GetStartLandEvacuatedPatientsVariables()
-                                landEvacuatedPatientsCost[Index_Cost] = self.GetLandEvacuatedPatientsCoeff(w, t, j, h, u, m)
+                                landEvacuatedPatientsCost[Index_Cost] = (
+                                    self.GetLandEvacuatedPatientsCoeff(w, t, j, h, u, m)
+                                    * self.ObjectivePolicyWeights.evacuation_risk
+                                )
                                 Index_Var = self.GetIndexLandEvacuatedPatientsVariables(w, t, j, h, u, m)
                                 var_name = f"u_L_w_{w}_t_{t}_j_{j}_h_{h}_u_{u}_m_{m}_index_{Index_Var}"
                                 self.LandEvacuatedPatients_Var[Index_Var] = self.LocAloc.addVar(vtype=GRB.CONTINUOUS, obj=landEvacuatedPatientsCost[Index_Cost], lb=0, ub=GRB.INFINITY, name=var_name)
@@ -1730,7 +1753,10 @@ class MIPSolver(object):
                             for hprime in self.Instance.HospitalSet:
                                 for m in self.Instance.RescueVehicleSet:
                                     Index_Cost = self.GetIndexAerialEvacuatedPatientsVariables(w, t, j, h, i, hprime, m) - self.GetStartAerialEvacuatedPatientsVariables()
-                                    aerialEvacuatedPatientsCost[Index_Cost] = self.GetAerialEvacuatedPatientsCoeff(w, t, j, h, i, hprime, m)
+                                    aerialEvacuatedPatientsCost[Index_Cost] = (
+                                        self.GetAerialEvacuatedPatientsCoeff(w, t, j, h, i, hprime, m)
+                                        * self.ObjectivePolicyWeights.evacuation_risk
+                                    )
                                     Index_Var = self.GetIndexAerialEvacuatedPatientsVariables(w, t, j, h, i, hprime, m)
                                     var_name = f"u_A_w_{w}_t_{t}_j_{j}_h_{h}_i_{i}_h'_{hprime}_m_{m}_index_{Index_Var}"
                                     self.AerialEvacuatedPatients_Var[Index_Var] = self.LocAloc.addVar(vtype=GRB.CONTINUOUS, obj=aerialEvacuatedPatientsCost[Index_Cost], lb=0, ub=GRB.INFINITY, name=var_name)
@@ -1746,7 +1772,10 @@ class MIPSolver(object):
                         Index_Cost = self.GetIndexUnevacuatedPatientsVariables(w, t, j, h) - self.GetStartUnevacuatedPatientsVariables()
                         # Check if t is the last time bucket (i.e., T)
                         if t == self.Instance.TimeBucketSet[-1]:  # Assuming the last time bucket is T
-                            unevacuatedPatientsCost[Index_Cost] = self.GetUnevacuatedPatientsCoeff(w, t, j, h)
+                            unevacuatedPatientsCost[Index_Cost] = (
+                                self.GetUnevacuatedPatientsCoeff(w, t, j, h)
+                                * self.ObjectivePolicyWeights.threat_risk
+                            )
                         else:
                             unevacuatedPatientsCost[Index_Cost] = 0     
                         Index_Var = self.GetIndexUnevacuatedPatientsVariables(w, t, j, h)
@@ -1842,8 +1871,16 @@ class MIPSolver(object):
         if Constants.Debug: print("\n We are in 'MIPSolver' Class -- Check_Optimality_and_Print_Solutions")
 
         solution = {}
-        if self.LocAloc.status == GRB.OPTIMAL:
-            print("Optimal solution found.")
+        has_incumbent = (
+            self.LocAloc.SolCount is not None
+            and self.LocAloc.SolCount > 0
+            and self.LocAloc.status in (GRB.OPTIMAL, GRB.TIME_LIMIT, GRB.SUBOPTIMAL, GRB.INTERRUPTED)
+        )
+        if self.LocAloc.status == GRB.OPTIMAL or has_incumbent:
+            if self.LocAloc.status == GRB.OPTIMAL:
+                print("Optimal solution found.")
+            else:
+                print(f"Feasible incumbent found (status={self.LocAloc.status}).")
             objective_value = self.LocAloc.objVal
             solution['objective_value'] = objective_value
             solution['variables'] = {}
@@ -1898,7 +1935,7 @@ class MIPSolver(object):
             print(f"No optimal solution found. Status code: {self.LocAloc.status}")
         return solution
         
-    def Solve(self, createsolution = True ):
+    def Solve(self, createsolution = True, accept_feasible = False):
         if Constants.Debug: print("\n We are in 'MIPSolver' Class -- Solve")
 
         start_time = time.time()
@@ -1950,10 +1987,27 @@ class MIPSolver(object):
         else:
             self.gurobi_gap = 0.0
 
-        if self.LocAloc.status == GRB.OPTIMAL:
+        has_solution = (
+            self.LocAloc.SolCount is not None
+            and self.LocAloc.SolCount > 0
+            and "objective_value" in sol
+        )
+        is_optimal = self.LocAloc.status == GRB.OPTIMAL
+        is_acceptable = is_optimal or (
+            accept_feasible
+            and has_solution
+            and self.LocAloc.status in (GRB.OPTIMAL, GRB.TIME_LIMIT, GRB.SUBOPTIMAL, GRB.INTERRUPTED)
+        )
+
+        if is_acceptable:
             if Constants.Debug:
-                print("GRB Solve Time(s): %r   GRB build time(s): %s   cost: %s" % (solvetime, buildtime, sol['objective_value']))
+                print("GRB Solve Time(s): %r   GRB build time(s): %s   cost: %s" % (solvetime, buildtime, sol.get('objective_value')))
             if createsolution:
+                if "objective_value" not in sol:
+                    sol = {
+                        "objective_value": self.LocAloc.ObjVal,
+                        "variables": {},
+                    }
                 Solution = self.CreateCRPSolution(sol, solvetime, nrvariable, nrconstraints)
             else:
                 Solution = None
@@ -1976,6 +2030,8 @@ class MIPSolver(object):
             print("Solution status: UNBOUNDED")
             # Write the model to an LP file
             self.LocAloc.write("unbounded_model.lp")
+        else:
+            print(f"No usable solution returned. Status code: {self.LocAloc.status}")
 
     def CreateCRPSolution(self, sol, solvetime, nrvariable, nrconstraints):
         if Constants.Debug: print("\n We are in 'MIPSolver' Class -- CreateCRPSolution")

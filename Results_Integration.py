@@ -3,9 +3,9 @@ import pandas as pd
 
 # Input and Output
 # The per-run workbooks written by the Evaluator live in the "Test" subfolder
-input_dir = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\R2\Case Data\Test"
+input_dir = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\R2\Test"
 #input_dir = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\Test"
-output_file = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\R2\Case Data\Test\Results.xlsx"
+output_file = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\R2\Test\Results.xlsx"
 #output_file = r"C:\PhD\Thesis\Papers\3rd\Code\Results\Approved-Instances\Results.xlsx"
 
 # Define columns for the summary DataFrame

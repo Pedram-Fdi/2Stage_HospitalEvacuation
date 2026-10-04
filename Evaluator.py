@@ -8,6 +8,7 @@ import pickle
 import pandas as pd
 import csv
 import datetime
+import os
 
 #This class contains the method to call the simulator and run the evauation
 class Evaluator( object ):
@@ -151,6 +152,19 @@ class Evaluator( object ):
         generic_columns = ["Instance", "Model", "Solver", "ScenarioGeneration", "NrScenario", "ScenarioSeed", 
                            "PHAObj", "PHAPenalty", "ALNSRL", "ALNSRL_DeepQ", "RLSelectionMethod", "BBC_Accelerator", 
                            "ClusteringMethod", "All Scenario", "NrEvaluation", "Policy Generation", "Time Horizon"]
+        # Only when objective-function sensitivity is active does GetAsStringList append ObjW_*.
+        if (
+            Constants.IsObjectiveFunctionSensitivityActive()
+            and getattr(self.TestIdentifier, "SensitivityScheme", None)
+        ):
+            generic_columns.insert(13, "SensitivityScheme")
+        if len(generic_data) != len(generic_columns):
+            # Safety: never crash Excel export if identifiers and headers drift.
+            if len(generic_data) > len(generic_columns):
+                for i in range(len(generic_columns), len(generic_data)):
+                    generic_columns.append(f"Extra_{i}")
+            else:
+                generic_data = list(generic_data) + [""] * (len(generic_columns) - len(generic_data))
         generic_df = pd.DataFrame([generic_data], columns=generic_columns) 
 
         # Data for the "InSample" sheet
@@ -180,14 +194,40 @@ class Evaluator( object ):
                                 "Evaluation Duration"]
         outofsample_df = pd.DataFrame([self.OutOfSampleTestResult], columns=outofsample_columns)
 
-        # Define file path
+        # Define file path (include SensitivityScheme in GetAsString when sensitivity flags are on)
+        os.makedirs('./Test', exist_ok=True)
         file_path = f'./Test/TestResult_{self.TestIdentifier.GetAsString()}_{self.EvalutorIdentificator.GetAsString()}.xlsx'
+
+        # Optional alternate output directory (objective-function sensitivity only)
+        alt_dir = None
+        if Constants.IsObjectiveFunctionSensitivityActive():
+            alt_dir = getattr(self, "ResultOutputDir", None)
+        if alt_dir:
+            os.makedirs(alt_dir, exist_ok=True)
+            alt_path = os.path.join(
+                alt_dir,
+                f'TestResult_{self.TestIdentifier.GetAsString()}_{self.EvalutorIdentificator.GetAsString()}.xlsx'
+            )
+        else:
+            alt_path = None
 
         # Write data to different sheets within the same Excel file
         with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
             generic_df.to_excel(writer, sheet_name='Generic Information', index=False)
             insample_df.to_excel(writer, sheet_name='InSample', index=False)
             outofsample_df.to_excel(writer, sheet_name='OutOfSample', index=False)
+
+        if alt_path is not None and os.path.abspath(alt_path) != os.path.abspath(file_path):
+            with pd.ExcelWriter(alt_path, engine='openpyxl') as writer:
+                generic_df.to_excel(writer, sheet_name='Generic Information', index=False)
+                insample_df.to_excel(writer, sheet_name='InSample', index=False)
+                outofsample_df.to_excel(writer, sheet_name='OutOfSample', index=False)
+
+        self.LastTestResultPath = file_path
+        self.LastAlternateTestResultPath = alt_path
+        print(f"Test result saved to: {os.path.abspath(file_path)}")
+        if alt_path:
+            print(f"Test result also saved to: {os.path.abspath(alt_path)}")
 
 
     # return a set of statistic associated with solving the problem
