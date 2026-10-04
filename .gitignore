@@ -111,3 +111,5 @@ UI/
 # Gradio local state
 .gradio/
 Instances/
+objective_function_sensitivity_analysis/plots/
+objective_function_sensitivity_analysis/results/

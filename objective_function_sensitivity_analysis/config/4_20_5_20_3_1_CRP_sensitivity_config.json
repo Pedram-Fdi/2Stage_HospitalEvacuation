@@ -1,0 +1,1004 @@
+{
+  "timestamp": "2026-10-02T12:09:33Z",
+  "instance": "4_20_5_20_3_1_CRP",
+  "model": "2Stage",
+  "solver": "MIP",
+  "nr_scenario": "50",
+  "scenario_generation": "RQMC",
+  "scenario_seed": 42,
+  "clustering": "NoC",
+  "policy": "_",
+  "nrevaluation": 50,
+  "run_evaluation": true,
+  "evaluation_scenario_seed": 3545,
+  "sensitivity_mode": "factorial",
+  "append_results": true,
+  "weight_scheme": null,
+  "objective_weights_cli": null,
+  "oat_multipliers": {
+    "travel_time": [
+      1.0,
+      10.0,
+      20.0,
+      50.0,
+      100.0,
+      500.0,
+      1000.0,
+      2000.0,
+      5000.0,
+      10000.0
+    ],
+    "evacuation_risk": [
+      0.1,
+      0.25,
+      0.5,
+      1.0,
+      2.0,
+      5.0,
+      10.0
+    ],
+    "unmet_demand": [
+      0.001,
+      0.05,
+      0.1,
+      0.25,
+      0.5,
+      1.0,
+      2.0,
+      5.0
+    ],
+    "threat_risk": [
+      0.1,
+      0.25,
+      0.5,
+      1.0,
+      2.0,
+      5.0,
+      10.0
+    ]
+  },
+  "factorial_levels": {
+    "travel_time": {
+      "L": 10.0,
+      "M": 500.0,
+      "H": 10000.0
+    },
+    "risk": {
+      "L": 0.1,
+      "M": 2.0,
+      "H": 10.0
+    },
+    "unmet_demand": {
+      "L": 0.001,
+      "M": 0.25,
+      "H": 5.0
+    }
+  },
+  "gurobi": {
+    "MIPTimeLimit": 36000,
+    "MIPGap": 0.0001,
+    "Threads": 1,
+    "OutputFlag": 0,
+    "RiskModel": "Exponential"
+  },
+  "weight_schemes": {
+    "Baseline": {
+      "mode": "schemes",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.25,
+        "evacuation_risk": 0.25,
+        "unmet_demand": 0.25,
+        "threat_risk": 0.25
+      }
+    },
+    "TravelTime_Priority": {
+      "mode": "schemes",
+      "weights": {
+        "travel_time": 2.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.4,
+        "evacuation_risk": 0.2,
+        "unmet_demand": 0.2,
+        "threat_risk": 0.2
+      }
+    },
+    "EvacuationRisk_Priority": {
+      "mode": "schemes",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 2.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.2,
+        "evacuation_risk": 0.4,
+        "unmet_demand": 0.2,
+        "threat_risk": 0.2
+      }
+    },
+    "UnmetDemand_Priority": {
+      "mode": "schemes",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 2.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.2,
+        "evacuation_risk": 0.2,
+        "unmet_demand": 0.4,
+        "threat_risk": 0.2
+      }
+    },
+    "ThreatRisk_Priority": {
+      "mode": "schemes",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 2.0
+      },
+      "weight_shares": {
+        "travel_time": 0.2,
+        "evacuation_risk": 0.2,
+        "unmet_demand": 0.2,
+        "threat_risk": 0.4
+      }
+    },
+    "OAT_travel_time_x10": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 10.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.7692307692307693,
+        "evacuation_risk": 0.07692307692307693,
+        "unmet_demand": 0.07692307692307693,
+        "threat_risk": 0.07692307692307693
+      }
+    },
+    "OAT_travel_time_x20": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 20.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.8695652173913043,
+        "evacuation_risk": 0.043478260869565216,
+        "unmet_demand": 0.043478260869565216,
+        "threat_risk": 0.043478260869565216
+      }
+    },
+    "OAT_travel_time_x50": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 50.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9433962264150944,
+        "evacuation_risk": 0.018867924528301886,
+        "unmet_demand": 0.018867924528301886,
+        "threat_risk": 0.018867924528301886
+      }
+    },
+    "OAT_travel_time_x100": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 100.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.970873786407767,
+        "evacuation_risk": 0.009708737864077669,
+        "unmet_demand": 0.009708737864077669,
+        "threat_risk": 0.009708737864077669
+      }
+    },
+    "OAT_travel_time_x500": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 500.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9940357852882704,
+        "evacuation_risk": 0.0019880715705765406,
+        "unmet_demand": 0.0019880715705765406,
+        "threat_risk": 0.0019880715705765406
+      }
+    },
+    "OAT_travel_time_x1000": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1000.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9970089730807578,
+        "evacuation_risk": 0.0009970089730807576,
+        "unmet_demand": 0.0009970089730807576,
+        "threat_risk": 0.0009970089730807576
+      }
+    },
+    "OAT_travel_time_x2000": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 2000.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9985022466300549,
+        "evacuation_risk": 0.0004992511233150275,
+        "unmet_demand": 0.0004992511233150275,
+        "threat_risk": 0.0004992511233150275
+      }
+    },
+    "OAT_travel_time_x5000": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 5000.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9994003597841296,
+        "evacuation_risk": 0.0001998800719568259,
+        "unmet_demand": 0.0001998800719568259,
+        "threat_risk": 0.0001998800719568259
+      }
+    },
+    "OAT_travel_time_x10000": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 10000.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9997000899730081,
+        "evacuation_risk": 9.997000899730081e-05,
+        "unmet_demand": 9.997000899730081e-05,
+        "threat_risk": 9.997000899730081e-05
+      }
+    },
+    "OAT_evacuation_risk_x0.1": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 0.1,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.3225806451612903,
+        "evacuation_risk": 0.03225806451612903,
+        "unmet_demand": 0.3225806451612903,
+        "threat_risk": 0.3225806451612903
+      }
+    },
+    "OAT_evacuation_risk_x0.25": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 0.25,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.3076923076923077,
+        "evacuation_risk": 0.07692307692307693,
+        "unmet_demand": 0.3076923076923077,
+        "threat_risk": 0.3076923076923077
+      }
+    },
+    "OAT_evacuation_risk_x0.5": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 0.5,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.2857142857142857,
+        "evacuation_risk": 0.14285714285714285,
+        "unmet_demand": 0.2857142857142857,
+        "threat_risk": 0.2857142857142857
+      }
+    },
+    "OAT_evacuation_risk_x2": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 2.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.2,
+        "evacuation_risk": 0.4,
+        "unmet_demand": 0.2,
+        "threat_risk": 0.2
+      }
+    },
+    "OAT_evacuation_risk_x5": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 5.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.125,
+        "evacuation_risk": 0.625,
+        "unmet_demand": 0.125,
+        "threat_risk": 0.125
+      }
+    },
+    "OAT_evacuation_risk_x10": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 10.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.07692307692307693,
+        "evacuation_risk": 0.7692307692307693,
+        "unmet_demand": 0.07692307692307693,
+        "threat_risk": 0.07692307692307693
+      }
+    },
+    "OAT_unmet_demand_x0.001": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 0.001,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.33322225924691773,
+        "evacuation_risk": 0.33322225924691773,
+        "unmet_demand": 0.0003332222592469177,
+        "threat_risk": 0.33322225924691773
+      }
+    },
+    "OAT_unmet_demand_x0.05": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 0.05,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.3278688524590164,
+        "evacuation_risk": 0.3278688524590164,
+        "unmet_demand": 0.01639344262295082,
+        "threat_risk": 0.3278688524590164
+      }
+    },
+    "OAT_unmet_demand_x0.1": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 0.1,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.3225806451612903,
+        "evacuation_risk": 0.3225806451612903,
+        "unmet_demand": 0.03225806451612903,
+        "threat_risk": 0.3225806451612903
+      }
+    },
+    "OAT_unmet_demand_x0.25": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 0.25,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.3076923076923077,
+        "evacuation_risk": 0.3076923076923077,
+        "unmet_demand": 0.07692307692307693,
+        "threat_risk": 0.3076923076923077
+      }
+    },
+    "OAT_unmet_demand_x0.5": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 0.5,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.2857142857142857,
+        "evacuation_risk": 0.2857142857142857,
+        "unmet_demand": 0.14285714285714285,
+        "threat_risk": 0.2857142857142857
+      }
+    },
+    "OAT_unmet_demand_x2": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 2.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.2,
+        "evacuation_risk": 0.2,
+        "unmet_demand": 0.4,
+        "threat_risk": 0.2
+      }
+    },
+    "OAT_unmet_demand_x5": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 5.0,
+        "threat_risk": 1.0
+      },
+      "weight_shares": {
+        "travel_time": 0.125,
+        "evacuation_risk": 0.125,
+        "unmet_demand": 0.625,
+        "threat_risk": 0.125
+      }
+    },
+    "OAT_threat_risk_x0.1": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 0.1
+      },
+      "weight_shares": {
+        "travel_time": 0.3225806451612903,
+        "evacuation_risk": 0.3225806451612903,
+        "unmet_demand": 0.3225806451612903,
+        "threat_risk": 0.03225806451612903
+      }
+    },
+    "OAT_threat_risk_x0.25": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 0.25
+      },
+      "weight_shares": {
+        "travel_time": 0.3076923076923077,
+        "evacuation_risk": 0.3076923076923077,
+        "unmet_demand": 0.3076923076923077,
+        "threat_risk": 0.07692307692307693
+      }
+    },
+    "OAT_threat_risk_x0.5": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 0.5
+      },
+      "weight_shares": {
+        "travel_time": 0.2857142857142857,
+        "evacuation_risk": 0.2857142857142857,
+        "unmet_demand": 0.2857142857142857,
+        "threat_risk": 0.14285714285714285
+      }
+    },
+    "OAT_threat_risk_x2": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 2.0
+      },
+      "weight_shares": {
+        "travel_time": 0.2,
+        "evacuation_risk": 0.2,
+        "unmet_demand": 0.2,
+        "threat_risk": 0.4
+      }
+    },
+    "OAT_threat_risk_x5": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 5.0
+      },
+      "weight_shares": {
+        "travel_time": 0.125,
+        "evacuation_risk": 0.125,
+        "unmet_demand": 0.125,
+        "threat_risk": 0.625
+      }
+    },
+    "OAT_threat_risk_x10": {
+      "mode": "oat",
+      "weights": {
+        "travel_time": 1.0,
+        "evacuation_risk": 1.0,
+        "unmet_demand": 1.0,
+        "threat_risk": 10.0
+      },
+      "weight_shares": {
+        "travel_time": 0.07692307692307693,
+        "evacuation_risk": 0.07692307692307693,
+        "unmet_demand": 0.07692307692307693,
+        "threat_risk": 0.7692307692307693
+      }
+    },
+    "FAC_TT-L_RK-L_UD-L": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10.0,
+        "evacuation_risk": 0.1,
+        "unmet_demand": 0.001,
+        "threat_risk": 0.1
+      },
+      "weight_shares": {
+        "travel_time": 0.980296049406921,
+        "evacuation_risk": 0.00980296049406921,
+        "unmet_demand": 9.802960494069211e-05,
+        "threat_risk": 0.00980296049406921
+      }
+    },
+    "FAC_TT-L_RK-L_UD-M": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10.0,
+        "evacuation_risk": 0.1,
+        "unmet_demand": 0.25,
+        "threat_risk": 0.1
+      },
+      "weight_shares": {
+        "travel_time": 0.9569377990430623,
+        "evacuation_risk": 0.009569377990430623,
+        "unmet_demand": 0.023923444976076555,
+        "threat_risk": 0.009569377990430623
+      }
+    },
+    "FAC_TT-L_RK-L_UD-H": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10.0,
+        "evacuation_risk": 0.1,
+        "unmet_demand": 5.0,
+        "threat_risk": 0.1
+      },
+      "weight_shares": {
+        "travel_time": 0.6578947368421053,
+        "evacuation_risk": 0.006578947368421053,
+        "unmet_demand": 0.32894736842105265,
+        "threat_risk": 0.006578947368421053
+      }
+    },
+    "FAC_TT-L_RK-M_UD-L": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10.0,
+        "evacuation_risk": 2.0,
+        "unmet_demand": 0.001,
+        "threat_risk": 2.0
+      },
+      "weight_shares": {
+        "travel_time": 0.7142346975216056,
+        "evacuation_risk": 0.14284693950432112,
+        "unmet_demand": 7.142346975216056e-05,
+        "threat_risk": 0.14284693950432112
+      }
+    },
+    "FAC_TT-L_RK-M_UD-M": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10.0,
+        "evacuation_risk": 2.0,
+        "unmet_demand": 0.25,
+        "threat_risk": 2.0
+      },
+      "weight_shares": {
+        "travel_time": 0.7017543859649122,
+        "evacuation_risk": 0.14035087719298245,
+        "unmet_demand": 0.017543859649122806,
+        "threat_risk": 0.14035087719298245
+      }
+    },
+    "FAC_TT-L_RK-M_UD-H": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10.0,
+        "evacuation_risk": 2.0,
+        "unmet_demand": 5.0,
+        "threat_risk": 2.0
+      },
+      "weight_shares": {
+        "travel_time": 0.5263157894736842,
+        "evacuation_risk": 0.10526315789473684,
+        "unmet_demand": 0.2631578947368421,
+        "threat_risk": 0.10526315789473684
+      }
+    },
+    "FAC_TT-L_RK-H_UD-L": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10.0,
+        "evacuation_risk": 10.0,
+        "unmet_demand": 0.001,
+        "threat_risk": 10.0
+      },
+      "weight_shares": {
+        "travel_time": 0.3333222225925802,
+        "evacuation_risk": 0.3333222225925802,
+        "unmet_demand": 3.333222225925802e-05,
+        "threat_risk": 0.3333222225925802
+      }
+    },
+    "FAC_TT-L_RK-H_UD-M": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10.0,
+        "evacuation_risk": 10.0,
+        "unmet_demand": 0.25,
+        "threat_risk": 10.0
+      },
+      "weight_shares": {
+        "travel_time": 0.3305785123966942,
+        "evacuation_risk": 0.3305785123966942,
+        "unmet_demand": 0.008264462809917356,
+        "threat_risk": 0.3305785123966942
+      }
+    },
+    "FAC_TT-L_RK-H_UD-H": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10.0,
+        "evacuation_risk": 10.0,
+        "unmet_demand": 5.0,
+        "threat_risk": 10.0
+      },
+      "weight_shares": {
+        "travel_time": 0.2857142857142857,
+        "evacuation_risk": 0.2857142857142857,
+        "unmet_demand": 0.14285714285714285,
+        "threat_risk": 0.2857142857142857
+      }
+    },
+    "FAC_TT-M_RK-L_UD-L": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 500.0,
+        "evacuation_risk": 0.1,
+        "unmet_demand": 0.001,
+        "threat_risk": 0.1
+      },
+      "weight_shares": {
+        "travel_time": 0.9995981615390612,
+        "evacuation_risk": 0.00019991963230781226,
+        "unmet_demand": 1.9991963230781224e-06,
+        "threat_risk": 0.00019991963230781226
+      }
+    },
+    "FAC_TT-M_RK-L_UD-M": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 500.0,
+        "evacuation_risk": 0.1,
+        "unmet_demand": 0.25,
+        "threat_risk": 0.1
+      },
+      "weight_shares": {
+        "travel_time": 0.9991008092716555,
+        "evacuation_risk": 0.0001998201618543311,
+        "unmet_demand": 0.0004995504046358277,
+        "threat_risk": 0.0001998201618543311
+      }
+    },
+    "FAC_TT-M_RK-L_UD-H": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 500.0,
+        "evacuation_risk": 0.1,
+        "unmet_demand": 5.0,
+        "threat_risk": 0.1
+      },
+      "weight_shares": {
+        "travel_time": 0.9897070467141725,
+        "evacuation_risk": 0.0001979414093428345,
+        "unmet_demand": 0.009897070467141725,
+        "threat_risk": 0.0001979414093428345
+      }
+    },
+    "FAC_TT-M_RK-M_UD-L": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 500.0,
+        "evacuation_risk": 2.0,
+        "unmet_demand": 0.001,
+        "threat_risk": 2.0
+      },
+      "weight_shares": {
+        "travel_time": 0.992061523687453,
+        "evacuation_risk": 0.003968246094749812,
+        "unmet_demand": 1.984123047374906e-06,
+        "threat_risk": 0.003968246094749812
+      }
+    },
+    "FAC_TT-M_RK-M_UD-M": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 500.0,
+        "evacuation_risk": 2.0,
+        "unmet_demand": 0.25,
+        "threat_risk": 2.0
+      },
+      "weight_shares": {
+        "travel_time": 0.991571641051066,
+        "evacuation_risk": 0.0039662865642042635,
+        "unmet_demand": 0.0004957858205255329,
+        "threat_risk": 0.0039662865642042635
+      }
+    },
+    "FAC_TT-M_RK-M_UD-H": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 500.0,
+        "evacuation_risk": 2.0,
+        "unmet_demand": 5.0,
+        "threat_risk": 2.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9823182711198428,
+        "evacuation_risk": 0.003929273084479371,
+        "unmet_demand": 0.009823182711198428,
+        "threat_risk": 0.003929273084479371
+      }
+    },
+    "FAC_TT-M_RK-H_UD-L": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 500.0,
+        "evacuation_risk": 10.0,
+        "unmet_demand": 0.001,
+        "threat_risk": 10.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9615366124295915,
+        "evacuation_risk": 0.01923073224859183,
+        "unmet_demand": 1.923073224859183e-06,
+        "threat_risk": 0.01923073224859183
+      }
+    },
+    "FAC_TT-M_RK-H_UD-M": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 500.0,
+        "evacuation_risk": 10.0,
+        "unmet_demand": 0.25,
+        "threat_risk": 10.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9610764055742431,
+        "evacuation_risk": 0.019221528111484865,
+        "unmet_demand": 0.0004805382027871216,
+        "threat_risk": 0.019221528111484865
+      }
+    },
+    "FAC_TT-M_RK-H_UD-H": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 500.0,
+        "evacuation_risk": 10.0,
+        "unmet_demand": 5.0,
+        "threat_risk": 10.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9523809523809523,
+        "evacuation_risk": 0.01904761904761905,
+        "unmet_demand": 0.009523809523809525,
+        "threat_risk": 0.01904761904761905
+      }
+    },
+    "FAC_TT-H_RK-L_UD-L": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10000.0,
+        "evacuation_risk": 0.1,
+        "unmet_demand": 0.001,
+        "threat_risk": 0.1
+      },
+      "weight_shares": {
+        "travel_time": 0.9999799004040018,
+        "evacuation_risk": 9.999799004040018e-06,
+        "unmet_demand": 9.999799004040019e-08,
+        "threat_risk": 9.999799004040018e-06
+      }
+    },
+    "FAC_TT-H_RK-L_UD-M": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10000.0,
+        "evacuation_risk": 0.1,
+        "unmet_demand": 0.25,
+        "threat_risk": 0.1
+      },
+      "weight_shares": {
+        "travel_time": 0.9999550020249088,
+        "evacuation_risk": 9.999550020249088e-06,
+        "unmet_demand": 2.499887505062272e-05,
+        "threat_risk": 9.999550020249088e-06
+      }
+    },
+    "FAC_TT-H_RK-L_UD-H": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10000.0,
+        "evacuation_risk": 0.1,
+        "unmet_demand": 5.0,
+        "threat_risk": 0.1
+      },
+      "weight_shares": {
+        "travel_time": 0.999480270259465,
+        "evacuation_risk": 9.994802702594651e-06,
+        "unmet_demand": 0.0004997401351297325,
+        "threat_risk": 9.994802702594651e-06
+      }
+    },
+    "FAC_TT-H_RK-M_UD-L": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10000.0,
+        "evacuation_risk": 2.0,
+        "unmet_demand": 0.001,
+        "threat_risk": 2.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9996000600159876,
+        "evacuation_risk": 0.0001999200120031975,
+        "unmet_demand": 9.996000600159876e-08,
+        "threat_risk": 0.0001999200120031975
+      }
+    },
+    "FAC_TT-H_RK-M_UD-M": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10000.0,
+        "evacuation_risk": 2.0,
+        "unmet_demand": 0.25,
+        "threat_risk": 2.0
+      },
+      "weight_shares": {
+        "travel_time": 0.999575180548267,
+        "evacuation_risk": 0.0001999150361096534,
+        "unmet_demand": 2.4989379513706676e-05,
+        "threat_risk": 0.0001999150361096534
+      }
+    },
+    "FAC_TT-H_RK-M_UD-H": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10000.0,
+        "evacuation_risk": 2.0,
+        "unmet_demand": 5.0,
+        "threat_risk": 2.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9991008092716556,
+        "evacuation_risk": 0.0001998201618543311,
+        "unmet_demand": 0.0004995504046358277,
+        "threat_risk": 0.0001998201618543311
+      }
+    },
+    "FAC_TT-H_RK-H_UD-L": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10000.0,
+        "evacuation_risk": 10.0,
+        "unmet_demand": 0.001,
+        "threat_risk": 10.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9980038924147812,
+        "evacuation_risk": 0.000998003892414781,
+        "unmet_demand": 9.980038924147812e-08,
+        "threat_risk": 0.000998003892414781
+      }
+    },
+    "FAC_TT-H_RK-H_UD-M": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10000.0,
+        "evacuation_risk": 10.0,
+        "unmet_demand": 0.25,
+        "threat_risk": 10.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9979790923380155,
+        "evacuation_risk": 0.0009979790923380155,
+        "unmet_demand": 2.4949477308450388e-05,
+        "threat_risk": 0.0009979790923380155
+      }
+    },
+    "FAC_TT-H_RK-H_UD-H": {
+      "mode": "factorial",
+      "weights": {
+        "travel_time": 10000.0,
+        "evacuation_risk": 10.0,
+        "unmet_demand": 5.0,
+        "threat_risk": 10.0
+      },
+      "weight_shares": {
+        "travel_time": 0.9975062344139651,
+        "evacuation_risk": 0.000997506234413965,
+        "unmet_demand": 0.0004987531172069825,
+        "threat_risk": 0.000997506234413965
+      }
+    }
+  },
+  "objective_component_mapping": {
+    "travel_time": "CasualtyTransfer_Var * travel times",
+    "evacuation_risk": "Land+Aerial evacuated patients * risk coeffs",
+    "unmet_demand": "UnsatisfiedCasualties_Var * Casualty_Shortage_Cost",
+    "threat_risk": "UnevacuatedPatients_Var(T) * cumulative threat risk"
+  },
+  "notes": [
+    "Policy weights multiply existing instance/model coefficients.",
+    "No objective-component normalization is applied.",
+    "In-sample scenarios are generated once and reused across all weight settings.",
+    "Out-of-sample evaluation uses the same EvaluationScenarioSeed and NrEvaluation for every scheme.",
+    "Comparable operational KPIs (on-time / not evacuated / ACF counts) should be taken from oos_* fields.",
+    "This is weighted-scalarization sensitivity analysis, not multi-objective reformulation.",
+    "Factorial mode uses scale-aware L/M/H levels and appends to existing result CSVs."
+  ],
+  "git_commit": "8b9c4753aaa2569c1d6beb4cfa0e3192a7312114",
+  "git_branch": "objective_function_sensitivity_analysis",
+  "prior_timestamp": "2026-10-01T13:19:28Z"
+}

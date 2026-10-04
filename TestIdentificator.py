@@ -19,7 +19,8 @@ class TestIdentificator:
                  alnsRL_DeepQ,
                  rlSelectionMethod,
                  bbcsetting,
-                 clustering
+                 clustering,
+                 sensitivity_scheme=None
                  ):
         
         """
@@ -30,6 +31,8 @@ class TestIdentificator:
         :param nrScenario: Number of scenarios.
         :param seed: Random seed for reproducibility.
         :param sampling: Sampling method for generating scenarios
+        :param sensitivity_scheme: Optional label for objective-weight sensitivity runs
+            (appended to file names so results do not overwrite each other).
         """
         self.InstanceName = instance_name
         self.Model = model
@@ -44,13 +47,33 @@ class TestIdentificator:
         self.RLSelectionMethod = rlSelectionMethod
         self.BBCSetting = bbcsetting
         self.Clustering = clustering
+        self.SensitivityScheme = sensitivity_scheme
+
+    def with_sensitivity_scheme(self, scheme_name):
+        """Return a shallow copy tagged with a sensitivity scheme label for unique I/O paths."""
+        return TestIdentificator(
+            instance_name=self.InstanceName,
+            model=self.Model,
+            solver=self.Solver,
+            nrScenario=self.NrScenario,
+            seed=self.ScenarioSeed,
+            sampling=self.ScenarioSampling,
+            phaobj=self.PHAObj,
+            phapenalty=self.PHAPenalty,
+            alnsRL=self.ALNSRL,
+            alnsRL_DeepQ=self.ALNSRL_DeepQ,
+            rlSelectionMethod=self.RLSelectionMethod,
+            bbcsetting=self.BBCSetting,
+            clustering=self.Clustering,
+            sensitivity_scheme=scheme_name,
+        )
 
     # The following list wil be appear only for the naming the stored files
     def get_as_string_list(self):
         """
         Return the test settings as a list of strings.
         """
-        return [
+        items = [
             self.InstanceName,
             self.Model,
             self.Solver,
@@ -64,6 +87,9 @@ class TestIdentificator:
             self.BBCSetting,
             self.Clustering
         ]
+        if self.SensitivityScheme and Constants.IsObjectiveFunctionSensitivityActive():
+            items.append(f"ObjW_{self.SensitivityScheme}")
+        return items
 
     # The following list wil be appear IN the stored files
     def GetAsString(self):
@@ -88,6 +114,8 @@ class TestIdentificator:
                 self.BBCSetting,
                 self.Clustering
                 ]
+        if self.SensitivityScheme and Constants.IsObjectiveFunctionSensitivityActive():
+            result.append(f"ObjW_{self.SensitivityScheme}")
         return result
     
     def print_attributes(self):
@@ -101,3 +129,5 @@ class TestIdentificator:
         print(f"  NrScenario: {self.NrScenario}")
         print(f"  Seed: {self.ScenarioSeed}")
         print(f"  ScenarioSampling: {self.ScenarioSampling}")
+        if self.SensitivityScheme and Constants.IsObjectiveFunctionSensitivityActive():
+            print(f"  SensitivityScheme: {self.SensitivityScheme}")

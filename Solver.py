@@ -192,21 +192,32 @@ class Solver(object):
 
         print(f"Scenarios saved to {file_path}")
 
-    def LocationAllocation(self, treestructur, averagescenario=False, recordsolveinfo=False):    
+    def LocationAllocation(self, treestructur, averagescenario=False, recordsolveinfo=False,
+                           scenariotree=None, objective_policy_weights=None, accept_feasible=False,
+                           quiet=False):    
         if Constants.Debug: print("\n We are in 'Solver' Class -- CRP")
         scenariotreemodel = self.TestIdentifier.Model
 
-        # Generate scenarios
-        Scenario = ScenarioTree(instance=self.Instance,
-                                tree_structure=self.TreeStructure,
-                                scenario_seed=self.TestIdentifier.ScenarioSeed,
-                                averagescenariotree=averagescenario,
-                                scenariogenerationmethod=self.ScenarioGeneration)
-        print("CasualtyDemand:\n", Scenario.CasualtyDemand)
-        print("HospitalDisruption:\n", Scenario.HospitalDisruption)
-        print("PatientDemand:\n", Scenario.PatientDemand)
-        print("PatientDischargedPercentage:\n", Scenario.PatientDischargedPercentage)
-        print("HospitalTreatmentCapacity:\n", Scenario.HospitalTreatmentCapacity)
+        # Ignore policy-weight overrides unless objective-function sensitivity is explicitly enabled.
+        if not Constants.IsObjectiveFunctionSensitivityActive():
+            objective_policy_weights = None
+
+        # Generate scenarios once, or reuse a frozen scenario tree for sensitivity analysis.
+        if scenariotree is None:
+            Scenario = ScenarioTree(instance=self.Instance,
+                                    tree_structure=self.TreeStructure,
+                                    scenario_seed=self.TestIdentifier.ScenarioSeed,
+                                    averagescenariotree=averagescenario,
+                                    scenariogenerationmethod=self.ScenarioGeneration)
+        else:
+            Scenario = scenariotree
+
+        if not quiet:
+            print("CasualtyDemand:\n", Scenario.CasualtyDemand)
+            print("HospitalDisruption:\n", Scenario.HospitalDisruption)
+            print("PatientDemand:\n", Scenario.PatientDemand)
+            print("PatientDischargedPercentage:\n", Scenario.PatientDischargedPercentage)
+            print("HospitalTreatmentCapacity:\n", Scenario.HospitalTreatmentCapacity)
 
         # Save scenarios to file
         if Constants.Debug:
@@ -224,7 +235,8 @@ class Solver(object):
                                     givenACFEstablishment = self.GivenACFEstablishment,
                                     givenNrLandRescueVehicle = self.GivenNrLandRescueVehicle,
                                     givenBackupHospital = self.GivenBackupHospital,
-                                    logfile=self.TestDescription)
+                                    logfile=self.TestDescription,
+                                    objective_policy_weights=objective_policy_weights)
         else:
             mipsolver = MIPSolver(instance = self.Instance, 
                                 model = MIPModel, 
@@ -233,12 +245,13 @@ class Solver(object):
                                 givenACFEstablishment = self.GivenACFEstablishment,
                                 givenNrLandRescueVehicle = self.GivenNrLandRescueVehicle,
                                 givenBackupHospital = self.GivenBackupHospital,
-                                logfile = self.TestDescription) 
+                                logfile = self.TestDescription,
+                                objective_policy_weights=objective_policy_weights) 
 
         if Constants.Debug: print("Start to model in Gurobi")  
 
         mipsolver.BuildModel()
 
-        solution = mipsolver.Solve()
+        solution = mipsolver.Solve(accept_feasible=accept_feasible)
 
         return solution, mipsolver
